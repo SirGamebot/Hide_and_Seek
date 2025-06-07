@@ -317,6 +317,7 @@ class NPCGuard(pygame.sprite.Sprite):
         self.path = astar(s, g, blk, gw, gh); self.idx = 0; self.last_astar = pygame.time.get_ticks()
 
     def _move(self, vec, spd, walls):
+        """Attempt to move along vector; return True if any motion occurred."""
         if vec.length() == 0:
             return False
         vec = vec.normalize() * spd
@@ -333,8 +334,6 @@ class NPCGuard(pygame.sprite.Sprite):
             new_rect_y = self.rect.move(0, vec.y)
             if not any(new_rect_y.colliderect(w) for w in walls):
                 self.rect = new_rect_y; moved = True
-        if not moved:
-            self.dir = self._rand_dir(); self.timer = random.randint(1000, 3000)
         return moved
 
     def update(self, player, alarm, emp, walls, panic):
@@ -353,30 +352,32 @@ class NPCGuard(pygame.sprite.Sprite):
             alarm = alarm or panic
         elif self.state == "chase" and now - self.chase_start > CHASE_TIMEOUT:
             self.state = "patrol"
+
         if self.state == "patrol":
             self.timer -= 16
-            if self.timer <= 0:
-                self.dir = self._rand_dir(); self.timer = random.randint(2000, 5000)
-            self._move(self.dir, self.PATROL_SP, walls); self.look = self.dir
+            if self.timer <= 0 or not self._move(self.dir, self.PATROL_SP, walls):
+                self.dir = self._rand_dir(); self.timer = random.randint(1000, 3000)
+            self.look = self.dir
         else:
             if to_pl.length() > 0:
                 self.look = to_pl.normalize()
-            if not self._move(self.look, self.CHASE_SP, walls):
-                if not line_of_sight(self.rect.center, player.rect.center, walls):
-                    if self._need_path():
-                        self._recalc_path(player, walls)
-                    if self.path and self.idx < len(self.path):
-                        wp = self.path[self.idx]
-                        tgt = pygame.math.Vector2(wp[0] * TILE + TILE / 2, wp[1] * TILE + TILE / 2)
-                        vec = tgt - pygame.math.Vector2(self.rect.center)
-                        if vec.length() < 5:
+            if line_of_sight(self.rect.center, player.rect.center, walls):
+                self.path = []; self.idx = 0
+                self._move(to_pl, self.CHASE_SP, walls)
+            else:
+                if self._need_path():
+                    self._recalc_path(player, walls)
+                if self.path and self.idx < len(self.path):
+                    wp = self.path[self.idx]
+                    tgt = pygame.math.Vector2(wp[0] * TILE + TILE / 2, wp[1] * TILE + TILE / 2)
+                    vec = tgt - pygame.math.Vector2(self.rect.center)
+                    if vec.length() < 5:
+                        self.idx += 1
+                    else:
+                        if not self._move(vec, self.CHASE_SP, walls):
                             self.idx += 1
-                        else:
-                            self._move(vec, self.CHASE_SP, walls)
                 else:
                     self._move(to_pl, self.CHASE_SP, walls)
-            else:
-                self.path = []; self.idx = 0
         return alarm
 
     def draw(self, s):
