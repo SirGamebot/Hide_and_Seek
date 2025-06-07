@@ -287,14 +287,14 @@ class Camera(pygame.sprite.Sprite):
 
 # ---------- smooth NPC Guard ----------------------------------
 class NPCGuard(pygame.sprite.Sprite):
-    PATROL_SP = 2.2; CHASE_SP = 4.0; VIS = 150; ANG = 60
+    PATROL_SP = 2.2; CHASE_SP = 3.2; VIS = 150; ANG = 60
 
     def __init__(self, pos):
         super().__init__()
         self.image = pygame.Surface((30, 30)); self.image.fill(RED)
         self.rect = self.image.get_rect(center=pos)
         self.state = "patrol"
-        self.dir = self._rand_dir(); self.timer = random.randint(2000, 5000)
+        self.dir = self._rand_dir(); self.timer = 0
         self.path = []; self.idx = 0; self.last_astar = 0; self.chase_start = 0
         self.stun = False; self.stun_t = 0; self.STUN_MS = 3000
         self.look = self.dir
@@ -316,13 +316,19 @@ class NPCGuard(pygame.sprite.Sprite):
         if vec.length() == 0:
             return
         vec = vec.normalize() * spd
-        new_rect_x = self.rect.move(vec.x, 0)
-        new_rect_y = self.rect.move(0, vec.y)
+        diag = self.rect.move(vec.x, vec.y)
+        if not any(diag.colliderect(w) for w in walls):
+            self.rect = diag
+            return
         moved = False
-        if not any(new_rect_x.colliderect(w) for w in walls):
-            self.rect = new_rect_x; moved = True
-        if not moved and not any(new_rect_y.colliderect(w) for w in walls):
-            self.rect = new_rect_y; moved = True
+        if vec.x:
+            new_rect_x = self.rect.move(vec.x, 0)
+            if not any(new_rect_x.colliderect(w) for w in walls):
+                self.rect = new_rect_x; moved = True
+        if vec.y:
+            new_rect_y = self.rect.move(0, vec.y)
+            if not any(new_rect_y.colliderect(w) for w in walls):
+                self.rect = new_rect_y; moved = True
         if not moved:
             self.dir = self._rand_dir(); self.timer = random.randint(1000, 3000)
 
