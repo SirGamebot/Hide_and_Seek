@@ -314,6 +314,13 @@ class NPCGuard(pygame.sprite.Sprite):
         gw, gh, blk = build_grid(walls, current_level.width, current_level.height)
         s = (self.rect.centerx // TILE, self.rect.centery // TILE)
         g = (player.rect.centerx // TILE, player.rect.centery // TILE)
+        # if the player's tile is blocked (e.g. hugging a wall) choose a nearby free tile
+        if g in blk:
+            for dx, dy in ((1,0),(-1,0),(0,1),(0,-1)):
+                cand = (g[0] + dx, g[1] + dy)
+                if 0 <= cand[0] < gw and 0 <= cand[1] < gh and cand not in blk:
+                    g = cand
+                    break
         self.path = astar(s, g, blk, gw, gh); self.idx = 0; self.last_astar = pygame.time.get_ticks()
 
     def _move(self, vec, spd, walls):
@@ -334,6 +341,14 @@ class NPCGuard(pygame.sprite.Sprite):
             new_rect_y = self.rect.move(0, vec.y)
             if not any(new_rect_y.colliderect(w) for w in walls):
                 self.rect = new_rect_y; moved = True
+        if not moved:
+            # try a small perpendicular step to escape corners
+            perp = pygame.math.Vector2(-vec.y, vec.x).normalize() * spd
+            for sign in (1, -1):
+                alt = self.rect.move(perp.x * sign, perp.y * sign)
+                if not any(alt.colliderect(w) for w in walls):
+                    self.rect = alt
+                    return True
         return moved
 
     def update(self, player, alarm, emp, walls, panic):
