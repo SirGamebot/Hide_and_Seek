@@ -35,7 +35,7 @@ FPS = 60
 TILE = 20
 
 CHASE_TIMEOUT = 10_000
-PATH_COMMIT_MS = 1_000
+PATH_COMMIT_MS = 300
 SAFE_RADIUS = 200  # min. Abstand Guard-Spawn ↔ Spieler-Spawn
 
 WHITE = (255, 255, 255); BLACK = (0, 0, 0); RED = (255, 0, 0); GREEN = (0, 255, 0)
@@ -287,7 +287,7 @@ class Camera(pygame.sprite.Sprite):
 
 # ---------- smooth NPC Guard ----------------------------------
 class NPCGuard(pygame.sprite.Sprite):
-    PATROL_SP = 2.2; CHASE_SP = 3.2; VIS = 150; ANG = 60
+    PATROL_SP = 2.2; CHASE_SP = 2.6; VIS = 150; ANG = 60
 
     def __init__(self, pos):
         super().__init__()
@@ -314,12 +314,12 @@ class NPCGuard(pygame.sprite.Sprite):
 
     def _move(self, vec, spd, walls):
         if vec.length() == 0:
-            return
+            return False
         vec = vec.normalize() * spd
         diag = self.rect.move(vec.x, vec.y)
         if not any(diag.colliderect(w) for w in walls):
             self.rect = diag
-            return
+            return True
         moved = False
         if vec.x:
             new_rect_x = self.rect.move(vec.x, 0)
@@ -329,50 +329,48 @@ class NPCGuard(pygame.sprite.Sprite):
             new_rect_y = self.rect.move(0, vec.y)
             if not any(new_rect_y.colliderect(w) for w in walls):
                 self.rect = new_rect_y; moved = True
-        if not moved:
-            self.dir = self._rand_dir(); self.timer = random.randint(1000, 3000)
+        return moved
 
-    def update(self, player, alarm, emp, walls, panic):
+    def update(self, player, panic, emp, walls):
         now = pygame.time.get_ticks()
         if self.stun:
             if now - self.stun_t >= self.STUN_MS:
                 self.stun = False; self.image.fill(RED); self.state = "patrol"
             else:
-                return alarm
+                return panic
         to_pl = pygame.math.Vector2(player.rect.center) - pygame.math.Vector2(self.rect.center)
         sees = to_pl.length() < self.VIS and (to_pl.length() == 0 or abs(self.look.angle_to(to_pl)) < self.ANG) \
             and line_of_sight(self.rect.center, player.rect.center, walls)
         if (sees or panic) and not emp:
             if self.state != "chase":
                 self.state = "chase"; self.chase_start = now; self.path = []
-            alarm = True
         elif self.state == "chase" and now - self.chase_start > CHASE_TIMEOUT:
             self.state = "patrol"
         if self.state == "patrol":
             self.timer -= 16
             if self.timer <= 0:
                 self.dir = self._rand_dir(); self.timer = random.randint(2000, 5000)
-            self._move(self.dir, self.PATROL_SP, walls); self.look = self.dir
+            if not self._move(self.dir, self.PATROL_SP, walls):
+                self.dir = self._rand_dir(); self.timer = random.randint(1000, 3000)
+            self.look = self.dir
         else:
             if to_pl.length() > 0:
                 self.look = to_pl.normalize()
-            self._move(self.look, self.CHASE_SP, walls)
-            if not line_of_sight(self.rect.center, player.rect.center, walls):
+            moved = self._move(self.look, self.CHASE_SP, walls)
+            if not moved:
                 if self._need_path():
                     self._recalc_path(player, walls)
                 if self.path and self.idx < len(self.path):
-                    waypoint_grid = self.path[self.idx]
-                    waypoint_world = pygame.math.Vector2(waypoint_grid[0] * TILE + TILE / 2, waypoint_grid[1] * TILE + TILE / 2)
-                    move_vec = waypoint_world - pygame.math.Vector2(self.rect.center)
-                    if move_vec.length() < 5:
+                    wp = self.path[self.idx]
+                    target = pygame.math.Vector2(wp[0] * TILE + TILE / 2, wp[1] * TILE + TILE / 2)
+                    vec = target - pygame.math.Vector2(self.rect.center)
+                    if vec.length() < 5:
                         self.idx += 1
-                    elif move_vec.length() > 0:
-                        self._move(move_vec.normalize(), self.CHASE_SP, walls)
-                elif to_pl.length() > 0:
-                    self._move(to_pl.normalize(), self.CHASE_SP, walls)
-            elif to_pl.length() > 0:
-                self._move(to_pl.normalize(), self.CHASE_SP, walls)
-        return alarm
+                    else:
+                        self._move(vec, self.CHASE_SP, walls)
+            else:
+                self.path = []; self.idx = 0
+        return panic
 
     def draw(self, s):
         s.blit(self.image, self.rect)
@@ -426,7 +424,7 @@ class Room:
             if c.detect(player, walls):
                 self.alarm = True; self.alarm_t = pygame.time.get_ticks()
         for g in self.npcs:
-            self.alarm = g.update(player, self.alarm, emp, walls, self.alarm) or self.alarm
+            g.update(player, self.alarm, emp, walls)
         self.bullets.update()
         for b in list(self.bullets):
             if any(b.rect.colliderect(w) for w in walls):
