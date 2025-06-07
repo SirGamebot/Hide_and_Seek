@@ -48,19 +48,23 @@ LANG_FILE = "language.cfg"
 # ------------------------------------------------
 lang_texts = {
     "en": {"title": "Stealth Hack Game", "start": "Start Game", "leader": "Leaderboards",
-            "ctrl": "Controls", "lang": "Change Language", "quit": "Quit",
+            "ctrl": "Controls", "shopdesc": "Shop Info", "lang": "Change Language", "quit": "Quit",
+            "shop_info": "EMP - disable cameras briefly | Faster - hack twice as fast | Stealth - guards react slower | Weapon - shoot bullets",
             "controls_text": "Move: W,A,S,D | Hack: H | EMP: E | Shoot: Space or Mouse | Door: O",
             "back": "ESC – back"},
     "de": {"title": "Stealth Hack Game", "start": "Spiel Starten", "leader": "Leaderboards",
-            "ctrl": "Steuerungen", "lang": "Sprache wechseln", "quit": "Beenden",
+            "ctrl": "Steuerungen", "shopdesc": "Shop Infos", "lang": "Sprache wechseln", "quit": "Beenden",
+            "shop_info": "EMP - Kameras kurz deaktivieren | Schneller - halbiert Hackzeit | Stealth - Wächter sehen dich später | Waffe - ermöglicht Schießen",
             "controls_text": "Bewegen: W,A,S,D | Hack: H | EMP: E | Schießen: Space oder Maus | Tür: O",
             "back": "ESC – zurück"},
     "es": {"title": "Juego de Infiltración", "start": "Iniciar Juego", "leader": "Marcadores",
-            "ctrl": "Controles", "lang": "Cambiar idioma", "quit": "Salir",
+            "ctrl": "Controles", "shopdesc": "Info de Tienda", "lang": "Cambiar idioma", "quit": "Salir",
+            "shop_info": "EMP - desactiva cámaras un momento | Rápido - hackeo más corto | Sigilo - guardias te detectan más lento | Arma - permite disparar",
             "controls_text": "Mover: W,A,S,D | Hack: H | EMP: E | Disparar: Espacio o Ratón | Puerta: O",
             "back": "ESC – volver"},
     "fr": {"title": "Jeu d’Infiltration", "start": "Démarrer", "leader": "Scores",
-            "ctrl": "Commandes", "lang": "Changer la langue", "quit": "Quitter",
+            "ctrl": "Commandes", "shopdesc": "Infos boutique", "lang": "Changer la langue", "quit": "Quitter",
+            "shop_info": "EMP - désactive les caméras un instant | Rapide - piratage deux fois plus vite | Furtif - les gardes te repèrent moins vite | Arme - permet de tirer",
             "controls_text": "Bouger: W,A,S,D | Hacker: H | EMP: E | Tirer: Espace ou Souris | Porte: O",
             "back": "ESC – retour"}
 }
@@ -277,8 +281,8 @@ class Camera(pygame.sprite.Sprite):
             self.dir = self.dir.rotate(1)
 
     def detect(self, player, walls):
-        v = pygame.math.Vector2(player.rect.center) - pygame.math.Vector2(self.rect.center)
-        return v.length() < self.vision and abs(self.dir.angle_to(v)) < self.angle and line_of_sight(self.rect.center, player.rect.center, walls)
+        end = visible_endpoint(self.rect.center, self.dir, self.vision, walls)
+        return line_intersects_rect(self.rect.center, end, player.rect)
 
     def draw(self, s, walls):
         s.blit(self.image, self.rect)
@@ -287,7 +291,7 @@ class Camera(pygame.sprite.Sprite):
 
 # ---------- smooth NPC Guard ----------------------------------
 class NPCGuard(pygame.sprite.Sprite):
-    PATROL_SP = 2.2; CHASE_SP = 2.6; VIS = 150; ANG = 60
+    PATROL_SP = 2.2; CHASE_SP = 3.2; VIS = 150; ANG = 60
 
     def __init__(self, pos):
         super().__init__()
@@ -510,6 +514,8 @@ def simple_menu(scr, title, options):
                     sel = (sel + 1) % len(options)
                 if e.key == pygame.K_RETURN:
                     return sel
+                if e.key == pygame.K_ESCAPE:
+                    return len(options) - 1
 
 
 def show_leader(scr):
@@ -523,6 +529,11 @@ def show_controls(scr):
     simple_menu(scr, t["ctrl"], t["controls_text"].split(" | ") + [t["back"]])
 
 
+def show_shop_info(scr):
+    t = lang_texts[current_language]
+    simple_menu(scr, t["shopdesc"], t["shop_info"].split(" | ") + [t["back"]])
+
+
 def lang_menu(scr):
     global current_language
     langs = [("English", "en"), ("Deutsch", "de"), ("Español", "es"), ("Français", "fr")]
@@ -534,7 +545,7 @@ def main_menu():
     scr = pygame.display.set_mode((BASE_W, BASE_H))
     while True:
         t = lang_texts[current_language]
-        choice = simple_menu(scr, t["title"], [t["start"], t["leader"], t["ctrl"], t["lang"], t["quit"]])
+        choice = simple_menu(scr, t["title"], [t["start"], t["leader"], t["ctrl"], t["shopdesc"], t["lang"], t["quit"]])
         if choice == 0:
             main_game()
         if choice == 1:
@@ -542,8 +553,10 @@ def main_menu():
         if choice == 2:
             show_controls(scr)
         if choice == 3:
-            lang_menu(scr)
+            show_shop_info(scr)
         if choice == 4:
+            lang_menu(scr)
+        if choice == 5:
             pygame.quit(); sys.exit()
 
 # ------------------------------------------------
