@@ -324,39 +324,44 @@ class NPCGuard(pygame.sprite.Sprite):
         self.path = astar(s, g, blk, gw, gh); self.idx = 0; self.last_astar = pygame.time.get_ticks()
 
     def _move(self, vec, spd, walls):
-        """Try to move; slide along walls when blocked."""
+        """Move with basic wall sliding to avoid getting stuck in corners."""
         if vec.length() == 0:
             return False
         vec = vec.normalize() * spd
         dx, dy = int(round(vec.x)), int(round(vec.y))
-        if dx == 0 and dy == 0:
-            dx = 1 if abs(vec.x) > abs(vec.y) and vec.x > 0 else -1 if abs(vec.x) > abs(vec.y) else 0
-            dy = 1 if abs(vec.y) >= abs(vec.x) and vec.y > 0 else -1 if abs(vec.y) >= abs(vec.x) else 0
-
-        attempts = []
-        attempts.append((dx, dy))
-        if abs(dx) > abs(dy):
-            attempts.append((dx, 0))
-            attempts.append((0, dy))
-        else:
-            attempts.append((0, dy))
-            attempts.append((dx, 0))
-        perp = pygame.math.Vector2(-vec.y, vec.x).normalize()
-        p_dx, p_dy = int(round(perp.x * spd)), int(round(perp.y * spd))
-        attempts.append((p_dx, p_dy))
-        attempts.append((-p_dx, -p_dy))
 
         bounds = pygame.Rect(0, 0, current_level.width, current_level.height)
-        for mx, my in attempts:
-            if mx == 0 and my == 0:
-                continue
-            cand = self.rect.move(mx, my)
-            if not bounds.contains(cand):
-                continue
-            if not any(cand.colliderect(w) for w in walls):
+
+        # try diagonal step first
+        cand = self.rect.move(dx, dy)
+        if bounds.contains(cand) and not any(cand.colliderect(w) for w in walls):
+            self.rect = cand
+            return True
+
+        moved = False
+        if dx:
+            cand = self.rect.move(dx, 0)
+            if bounds.contains(cand) and not any(cand.colliderect(w) for w in walls):
                 self.rect = cand
-                return True
-        return False
+                moved = True
+        if dy:
+            cand = self.rect.move(0, dy)
+            if bounds.contains(cand) and not any(cand.colliderect(w) for w in walls):
+                self.rect = cand
+                moved = True
+
+        if not moved:
+            # small perpendicular nudge to escape tight corners
+            perp = pygame.math.Vector2(-vec.y, vec.x).normalize()
+            p_dx = int(round(perp.x))
+            p_dy = int(round(perp.y))
+            for sign in (1, -1):
+                cand = self.rect.move(p_dx * sign, p_dy * sign)
+                if bounds.contains(cand) and not any(cand.colliderect(w) for w in walls):
+                    self.rect = cand
+                    return True
+
+        return moved
 
     def update(self, player, alarm, emp, walls, panic):
         now = pygame.time.get_ticks()
@@ -529,7 +534,15 @@ def shop(player, lvl):
             if e.type == pygame.KEYDOWN:
                 if e.unicode in "1234":
                     k = keys[int(e.unicode) - 1]
-                    if player.money >= price[k] and not player.upg[k]:
+                    if k == "Weapon" and player.money >= price[k] and not player.upg["Weapon"]:
+                        if player.upg.get("EMP"):
+                            player.upg["EMP"] = False
+                        player.money -= price[k]; player.upg["Weapon"] = True
+                    elif k == "EMP" and player.money >= price[k] and not player.upg["EMP"]:
+                        if player.upg.get("Weapon"):
+                            player.upg["Weapon"] = False
+                        player.money -= price[k]; player.upg["EMP"] = True
+                    elif player.money >= price[k] and not player.upg[k]:
                         player.money -= price[k]; player.upg[k] = True
                 if e.key == pygame.K_RETURN:
                     open_shop = False
@@ -579,9 +592,12 @@ def show_shop_info(scr):
 
 def lang_menu(scr):
     global current_language
-    langs = [("English", "en"), ("Deutsch", "de"), ("Español", "es"), ("Français", "fr")]
+    langs = [("English", "en"), ("Deutsch", "de"), ("Español", "es"), ("Français", "fr"), (lang_texts[current_language]["back"], None)]
     sel = simple_menu(scr, lang_texts[current_language]["lang"], [n for n, _ in langs])
-    current_language = langs[sel][1]; save_language(current_language)
+    code = langs[sel][1]
+    if code:
+        current_language = code
+        save_language(current_language)
 
 
 def main_menu():
