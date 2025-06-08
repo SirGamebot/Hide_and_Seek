@@ -231,12 +231,16 @@ class Player(pygame.sprite.Sprite):
             br = pygame.Rect(0, 0, bw, 3)
             br.midtop = (self.rect.centerx, self.rect.bottom + 2)
             pygame.draw.rect(s, BLUE, br)
+        if self.upg["Weapon"]:
+            draw_txt(s, str(self.ammo), 12, (self.rect.centerx + 20, self.rect.bottom))
         if self.upg["EMP"] and self.emp_left > 0 and now - self.last_emp < self.emp_cd:
             frac = (now - self.last_emp) / self.emp_cd
             gw = int(30 * frac)
             gr = pygame.Rect(0, 0, gw, 3)
             gr.midtop = (self.rect.centerx, self.rect.bottom + 6)
             pygame.draw.rect(s, GREEN, gr)
+        if self.upg["EMP"]:
+            draw_txt(s, str(self.emp_left), 12, (self.rect.centerx + 20, self.rect.bottom + 4))
 
 
 class Terminal(pygame.sprite.Sprite):
