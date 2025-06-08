@@ -207,6 +207,14 @@ class Player(pygame.sprite.Sprite):
         self.speed = 4
         self.money = 100
         self.upg = {"EMP": False, "Faster": False, "Stealth": False, "Weapon": False}
+        self.ammo_max = 5
+        self.ammo = 0
+        self.reload_time = 1000
+        self.last_shot = 0
+        self.emp_max = 3
+        self.emp_left = 0
+        self.emp_cd = 3000
+        self.last_emp = 0
 
     def update(self, keys):
         dx = keys[pygame.K_d] - keys[pygame.K_a]
@@ -216,6 +224,19 @@ class Player(pygame.sprite.Sprite):
 
     def draw(self, s):
         s.blit(self.image, self.rect)
+        now = pygame.time.get_ticks()
+        if self.upg["Weapon"] and self.ammo > 0 and now - self.last_shot < self.reload_time:
+            frac = (now - self.last_shot) / self.reload_time
+            bw = int(30 * frac)
+            br = pygame.Rect(0, 0, bw, 3)
+            br.midtop = (self.rect.centerx, self.rect.bottom + 2)
+            pygame.draw.rect(s, BLUE, br)
+        if self.upg["EMP"] and self.emp_left > 0 and now - self.last_emp < self.emp_cd:
+            frac = (now - self.last_emp) / self.emp_cd
+            gw = int(30 * frac)
+            gr = pygame.Rect(0, 0, gw, 3)
+            gr.midtop = (self.rect.centerx, self.rect.bottom + 6)
+            pygame.draw.rect(s, GREEN, gr)
 
 
 class Terminal(pygame.sprite.Sprite):
@@ -538,10 +559,12 @@ def shop(player, lvl):
                         if player.upg.get("EMP"):
                             player.upg["EMP"] = False
                         player.money -= price[k]; player.upg["Weapon"] = True
+                        player.ammo = player.ammo_max
                     elif k == "EMP" and player.money >= price[k] and not player.upg["EMP"]:
                         if player.upg.get("Weapon"):
                             player.upg["Weapon"] = False
                         player.money -= price[k]; player.upg["EMP"] = True
+                        player.emp_left = player.emp_max
                     elif player.money >= price[k] and not player.upg[k]:
                         player.money -= price[k]; player.upg[k] = True
                 if e.key == pygame.K_RETURN:
@@ -636,15 +659,19 @@ def main_game():
             if e.type == pygame.QUIT:
                 running = False
             elif e.type == pygame.KEYDOWN:
-                if e.key == pygame.K_e and player.upg["EMP"]:
+                if e.key == pygame.K_e and player.upg["EMP"] and player.emp_left > 0 and pygame.time.get_ticks() - player.last_emp >= player.emp_cd:
                     emp = True; emp_t = pygame.time.get_ticks()
+                    player.emp_left -= 1
+                    player.last_emp = emp_t
                 if e.key == pygame.K_h:
                     for t in current_level.rooms[current_level.cur].terminals:
                         if player.rect.colliderect(t.rect):
                             t.interact(player)
-                if e.key == pygame.K_SPACE and player.upg["Weapon"]:
-                    vec = pygame.math.Vector2(pygame.mouse.get_pos()) - pygame.math.Vector2(player.rect.center)
+                if e.key == pygame.K_SPACE and player.upg["Weapon"] and player.ammo > 0 and pygame.time.get_ticks() - player.last_shot >= player.reload_time:
+                    vec = pygame.math.Vector2(pygame.mouse.get_pos()) - pygame.math.Vector2(player.rect.center) 
                     current_level.rooms[current_level.cur].bullets.add(Bullet(player.rect.center, vec))
+                    player.ammo -= 1
+                    player.last_shot = pygame.time.get_ticks()
                 if e.key == pygame.K_o:
                     room = current_level.rooms[current_level.cur]
                     for d in room.doors:
@@ -654,9 +681,11 @@ def main_game():
                             elif d.destination == "back" and current_level.cur > 0:
                                 current_level.cur -= 1
                             player.rect.center = get_player_spawn(current_level.rooms[current_level.cur])
-            elif e.type == pygame.MOUSEBUTTONDOWN and player.upg["Weapon"]:
-                vec = pygame.math.Vector2(pygame.mouse.get_pos()) - pygame.math.Vector2(player.rect.center)
+            elif e.type == pygame.MOUSEBUTTONDOWN and player.upg["Weapon"] and player.ammo > 0 and pygame.time.get_ticks() - player.last_shot >= player.reload_time:
+                vec = pygame.math.Vector2(pygame.mouse.get_pos()) - pygame.math.Vector2(player.rect.center) 
                 current_level.rooms[current_level.cur].bullets.add(Bullet(player.rect.center, vec))
+                player.ammo -= 1
+                player.last_shot = pygame.time.get_ticks()
         emp = emp and pygame.time.get_ticks() - emp_t < 2000
         old = player.rect.copy(); player.update(pygame.key.get_pressed())
         if any(player.rect.colliderect(w) for w in current_level.rooms[current_level.cur].inner_walls):
@@ -666,6 +695,7 @@ def main_game():
             running = False
         if current_level.all_hacked():
             rooms_done += current_level.n
+            player.money += 50 * lvl
             shop(player, lvl); lvl += 1
             if lvl > 10:
                 break
@@ -673,6 +703,12 @@ def main_game():
             scr = pygame.display.set_mode((current_level.width, current_level.height))
             player.rect.center = get_player_spawn(current_level.rooms[0])
         scr.fill(WHITE); current_level.draw(scr); player.draw(scr)
+        info = f"Lv:{lvl} Rooms:{rooms_done} $:{player.money}"
+        if player.upg.get("Weapon"):
+            info += f" Ammo:{player.ammo}"
+        if player.upg.get("EMP"):
+            info += f" EMP:{player.emp_left}"
+        draw_txt(scr, info, 24, (10, 10))
         pygame.display.flip()
     update_leaderboard(rooms_done)
 
