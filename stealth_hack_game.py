@@ -291,7 +291,7 @@ class Camera(pygame.sprite.Sprite):
 
 # ---------- smooth NPC Guard ----------------------------------
 class NPCGuard(pygame.sprite.Sprite):
-    PATROL_SP = 2.2; CHASE_SP = 3.6; VIS = 150; ANG = 60
+    PATROL_SP = 2.2; CHASE_SP = 3.2; VIS = 150; ANG = 60
 
     def __init__(self, pos):
         super().__init__()
@@ -324,49 +324,37 @@ class NPCGuard(pygame.sprite.Sprite):
         self.path = astar(s, g, blk, gw, gh); self.idx = 0; self.last_astar = pygame.time.get_ticks()
 
     def _move(self, vec, spd, walls):
-        """Move along vector and slide around walls."""
+        """Try to move; slide along walls when blocked."""
         if vec.length() == 0:
             return False
         vec = vec.normalize() * spd
         dx, dy = int(round(vec.x)), int(round(vec.y))
         if dx == 0 and dy == 0:
-            # ensure at least one pixel of movement
-            if abs(vec.x) > abs(vec.y):
-                dx = 1 if vec.x > 0 else -1
-            else:
-                dy = 1 if vec.y > 0 else -1
+            dx = 1 if abs(vec.x) > abs(vec.y) and vec.x > 0 else -1 if abs(vec.x) > abs(vec.y) else 0
+            dy = 1 if abs(vec.y) >= abs(vec.x) and vec.y > 0 else -1 if abs(vec.y) >= abs(vec.x) else 0
 
-        target = self.rect.move(dx, dy)
-        if not any(target.colliderect(w) for w in walls):
-            self.rect = target
-            self.rect.clamp_ip(pygame.Rect(0, 0, current_level.width, current_level.height))
-            return True
+        attempts = []
+        attempts.append((dx, dy))
+        if abs(dx) > abs(dy):
+            attempts.append((dx, 0))
+            attempts.append((0, dy))
+        else:
+            attempts.append((0, dy))
+            attempts.append((dx, 0))
+        perp = pygame.math.Vector2(-vec.y, vec.x).normalize()
+        p_dx, p_dy = int(round(perp.x * spd)), int(round(perp.y * spd))
+        attempts.append((p_dx, p_dy))
+        attempts.append((-p_dx, -p_dy))
 
-        moved = False
-        if dx:
-            nx = self.rect.move(dx, 0)
-            if not any(nx.colliderect(w) for w in walls):
-                self.rect = nx
-                moved = True
-        if dy:
-            ny = self.rect.move(0, dy)
-            if not any(ny.colliderect(w) for w in walls):
-                self.rect = ny
-                moved = True
-
-        if not moved:
-            # attempt a perpendicular step to escape corners
-            perp = pygame.math.Vector2(-vec.y, vec.x).normalize()
-            for sign in (1, -1):
-                alt = self.rect.move(int(round(perp.x * spd)) * sign, int(round(perp.y * spd)) * sign)
-                if not any(alt.colliderect(w) for w in walls):
-                    self.rect = alt
-                    moved = True
-                    break
-
-        if moved:
-            self.rect.clamp_ip(pygame.Rect(0, 0, current_level.width, current_level.height))
-        return moved
+        for mx, my in attempts:
+            if mx == 0 and my == 0:
+                continue
+            cand = self.rect.move(mx, my)
+            if not any(cand.colliderect(w) for w in walls):
+                self.rect = cand
+                self.rect.clamp_ip(pygame.Rect(0, 0, current_level.width, current_level.height))
+                return True
+        return False
 
     def update(self, player, alarm, emp, walls, panic):
         now = pygame.time.get_ticks()
@@ -423,7 +411,7 @@ class NPCGuard(pygame.sprite.Sprite):
 
 class Room:
     def __init__(self, w, h, guards, idx, total, pl_spawn):
-        thick = 20
+        thick = 15
         self.outer_walls = [pygame.Rect(0, 0, w, thick), pygame.Rect(0, h - thick, w, thick),
                             pygame.Rect(0, 0, thick, h), pygame.Rect(w - thick, 0, thick, h)]
         self.inner_walls = []
@@ -654,7 +642,6 @@ def main_game():
             scr = pygame.display.set_mode((current_level.width, current_level.height))
             player.rect.center = get_player_spawn(current_level.rooms[0])
         scr.fill(WHITE); current_level.draw(scr); player.draw(scr)
-        draw_txt(scr, f"Lv:{lvl}  Rooms:{rooms_done}  $:{player.money}", 24, (10, 10))
         pygame.display.flip()
     update_leaderboard(rooms_done)
 
