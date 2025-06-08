@@ -396,7 +396,9 @@ class NPCGuard(pygame.sprite.Sprite):
             else:
                 return alarm
         to_pl = pygame.math.Vector2(player.rect.center) - pygame.math.Vector2(self.rect.center)
-        sees = to_pl.length() < self.VIS and (to_pl.length() == 0 or abs(self.look.angle_to(to_pl)) < self.ANG) \
+        vis = self.VIS * (0.6 if player.upg["Stealth"] else 1.0)
+        ang = self.ANG * (0.8 if player.upg["Stealth"] else 1.0)
+        sees = to_pl.length() < vis and (to_pl.length() == 0 or abs(self.look.angle_to(to_pl)) < ang) \
             and line_of_sight(self.rect.center, player.rect.center, walls)
         if (sees or panic) and not emp:
             if self.state != "chase":
