@@ -396,8 +396,9 @@ class NPCGuard(pygame.sprite.Sprite):
             else:
                 return alarm
         to_pl = pygame.math.Vector2(player.rect.center) - pygame.math.Vector2(self.rect.center)
-        vis = self.VIS * (0.6 if player.upg["Stealth"] else 1.0)
-        ang = self.ANG * (0.8 if player.upg["Stealth"] else 1.0)
+        self.stealth_mod = 0.85 if player.upg["Stealth"] else 1.0
+        vis = self.VIS * self.stealth_mod
+        ang = self.ANG
         sees = to_pl.length() < vis and (to_pl.length() == 0 or abs(self.look.angle_to(to_pl)) < ang) \
             and line_of_sight(self.rect.center, player.rect.center, walls)
         if (sees or panic) and not emp:
@@ -409,7 +410,7 @@ class NPCGuard(pygame.sprite.Sprite):
 
         if self.state == "patrol":
             self.timer -= 16
-            if self.timer <= 0 or not self._move(self.dir, self.PATROL_SP, walls):
+            if self.timer <= 0 or not self._move(self.dir, self.PATROL_SP * self.stealth_mod, walls):
                 self.dir = self._rand_dir(); self.timer = random.randint(1000, 3000)
             self.look = self.dir
         else:
@@ -417,7 +418,7 @@ class NPCGuard(pygame.sprite.Sprite):
                 self.look = to_pl.normalize()
             if line_of_sight(self.rect.center, player.rect.center, walls):
                 self.path = []; self.idx = 0
-                self._move(to_pl, self.CHASE_SP, walls)
+                self._move(to_pl, self.CHASE_SP * self.stealth_mod, walls)
             else:
                 if self._need_path():
                     self._recalc_path(player, walls)
@@ -428,15 +429,16 @@ class NPCGuard(pygame.sprite.Sprite):
                     if vec.length() < 5:
                         self.idx += 1
                     else:
-                        if not self._move(vec, self.CHASE_SP, walls):
+                        if not self._move(vec, self.CHASE_SP * self.stealth_mod, walls):
                             self.idx += 1
                 else:
-                    self._move(to_pl, self.CHASE_SP, walls)
+                    self._move(to_pl, self.CHASE_SP * self.stealth_mod, walls)
         return alarm
 
     def draw(self, s):
         s.blit(self.image, self.rect)
-        end = (self.rect.centerx + self.look.x * self.VIS, self.rect.centery + self.look.y * self.VIS)
+        length = self.VIS * getattr(self, 'stealth_mod', 1.0)
+        end = (self.rect.centerx + self.look.x * length, self.rect.centery + self.look.y * length)
         pygame.draw.line(s, ORANGE, self.rect.center, end, 2)
 
 # ------------------------------------------------
