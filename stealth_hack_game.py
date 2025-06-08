@@ -291,7 +291,7 @@ class Camera(pygame.sprite.Sprite):
 
 # ---------- smooth NPC Guard ----------------------------------
 class NPCGuard(pygame.sprite.Sprite):
-    PATROL_SP = 2.2; CHASE_SP = 3.2; VIS = 150; ANG = 60
+    PATROL_SP = 2.2; CHASE_SP = 3.6; VIS = 150; ANG = 60
 
     def __init__(self, pos):
         super().__init__()
@@ -324,18 +324,25 @@ class NPCGuard(pygame.sprite.Sprite):
         self.path = astar(s, g, blk, gw, gh); self.idx = 0; self.last_astar = pygame.time.get_ticks()
 
     def _move(self, vec, spd, walls):
-        """Move along vector and slide along walls. Returns True if moved."""
+        """Move along vector and slide around walls."""
         if vec.length() == 0:
             return False
         vec = vec.normalize() * spd
         dx, dy = int(round(vec.x)), int(round(vec.y))
-        moved = False
+        if dx == 0 and dy == 0:
+            # ensure at least one pixel of movement
+            if abs(vec.x) > abs(vec.y):
+                dx = 1 if vec.x > 0 else -1
+            else:
+                dy = 1 if vec.y > 0 else -1
 
-        diag = self.rect.move(dx, dy)
-        if not any(diag.colliderect(w) for w in walls):
-            self.rect = diag
+        target = self.rect.move(dx, dy)
+        if not any(target.colliderect(w) for w in walls):
+            self.rect = target
+            self.rect.clamp_ip(pygame.Rect(0, 0, current_level.width, current_level.height))
             return True
 
+        moved = False
         if dx:
             nx = self.rect.move(dx, 0)
             if not any(nx.colliderect(w) for w in walls):
@@ -346,6 +353,19 @@ class NPCGuard(pygame.sprite.Sprite):
             if not any(ny.colliderect(w) for w in walls):
                 self.rect = ny
                 moved = True
+
+        if not moved:
+            # attempt a perpendicular step to escape corners
+            perp = pygame.math.Vector2(-vec.y, vec.x).normalize()
+            for sign in (1, -1):
+                alt = self.rect.move(int(round(perp.x * spd)) * sign, int(round(perp.y * spd)) * sign)
+                if not any(alt.colliderect(w) for w in walls):
+                    self.rect = alt
+                    moved = True
+                    break
+
+        if moved:
+            self.rect.clamp_ip(pygame.Rect(0, 0, current_level.width, current_level.height))
         return moved
 
     def update(self, player, alarm, emp, walls, panic):
@@ -436,21 +456,22 @@ class Room:
         self.width = w; self.height = h
 
     def update(self, player, emp):
-        walls = self.outer_walls + self.inner_walls
+        all_walls = self.outer_walls + self.inner_walls
+        guard_walls = self.inner_walls
         for t in self.terminals:
             t.update()
         for c in self.cameras:
             c.update(emp)
-            if c.detect(player, walls):
+            if c.detect(player, all_walls):
                 self.alarm = True; self.alarm_t = pygame.time.get_ticks()
         for g in self.npcs:
             before = self.alarm
-            self.alarm = g.update(player, self.alarm, emp, walls, self.alarm) or self.alarm
+            self.alarm = g.update(player, self.alarm, emp, guard_walls, self.alarm) or self.alarm
             if not before and self.alarm:
                 self.alarm_t = pygame.time.get_ticks()
         self.bullets.update()
         for b in list(self.bullets):
-            if any(b.rect.colliderect(w) for w in walls):
+            if any(b.rect.colliderect(w) for w in all_walls):
                 b.kill()
             hit = pygame.sprite.spritecollideany(b, self.npcs)
             if hit:
