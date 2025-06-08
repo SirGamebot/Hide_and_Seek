@@ -324,31 +324,24 @@ class NPCGuard(pygame.sprite.Sprite):
         self.path = astar(s, g, blk, gw, gh); self.idx = 0; self.last_astar = pygame.time.get_ticks()
 
     def _move(self, vec, spd, walls):
-        """Attempt to move along vector; return True if any motion occurred."""
+        """Move along vector while sliding on walls. Return True if moved."""
         if vec.length() == 0:
             return False
         vec = vec.normalize() * spd
-        diag = self.rect.move(vec.x, vec.y)
-        if not any(diag.colliderect(w) for w in walls):
-            self.rect = diag
-            return True
+        step_count = int(max(abs(vec.x), abs(vec.y))) + 1
+        step = pygame.math.Vector2(vec.x / step_count, vec.y / step_count)
         moved = False
-        if vec.x:
-            new_rect_x = self.rect.move(vec.x, 0)
-            if not any(new_rect_x.colliderect(w) for w in walls):
-                self.rect = new_rect_x; moved = True
-        if vec.y:
-            new_rect_y = self.rect.move(0, vec.y)
-            if not any(new_rect_y.colliderect(w) for w in walls):
-                self.rect = new_rect_y; moved = True
-        if not moved:
-            # try a small perpendicular step to escape corners
-            perp = pygame.math.Vector2(-vec.y, vec.x).normalize() * spd
-            for sign in (1, -1):
-                alt = self.rect.move(perp.x * sign, perp.y * sign)
-                if not any(alt.colliderect(w) for w in walls):
-                    self.rect = alt
-                    return True
+        for _ in range(step_count):
+            if step.x:
+                nx = self.rect.move(step.x, 0)
+                if not any(nx.colliderect(w) for w in walls):
+                    self.rect = nx
+                    moved = True
+            if step.y:
+                ny = self.rect.move(0, step.y)
+                if not any(ny.colliderect(w) for w in walls):
+                    self.rect = ny
+                    moved = True
         return moved
 
     def update(self, player, alarm, emp, walls, panic):
