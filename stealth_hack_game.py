@@ -237,10 +237,10 @@ class Player(pygame.sprite.Sprite):
             frac = (now - self.last_emp) / self.emp_cd
             gw = int(30 * frac)
             gr = pygame.Rect(0, 0, gw, 3)
-            gr.midtop = (self.rect.centerx, self.rect.bottom + 6)
+            gr.midtop = (self.rect.centerx, self.rect.bottom + 10)
             pygame.draw.rect(s, GREEN, gr)
         if self.upg["EMP"]:
-            draw_txt(s, str(self.emp_left), 12, (self.rect.centerx + 20, self.rect.bottom + 4))
+            draw_txt(s, str(self.emp_left), 12, (self.rect.centerx + 20, self.rect.bottom + 8))
 
 
 class Terminal(pygame.sprite.Sprite):
@@ -552,7 +552,6 @@ def shop(player, lvl):
     price = {k: base[k] * lvl for k in base}; keys = list(base)
     scr = pygame.display.get_surface(); font = pygame.font.SysFont(None, 30); clk = pygame.time.Clock()
     open_shop = True
-    purchased = False
     while open_shop:
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
@@ -560,22 +559,14 @@ def shop(player, lvl):
             if e.type == pygame.KEYDOWN:
                 if e.unicode in "1234":
                     k = keys[int(e.unicode) - 1]
-                    if not purchased:
-                        if k == "Weapon" and player.money >= price[k] and not player.upg["Weapon"]:
-                            if player.upg.get("EMP"):
-                                player.upg["EMP"] = False
-                            player.money -= price[k]; player.upg["Weapon"] = True
-                            player.ammo = player.ammo_max
-                            purchased = True
-                        elif k == "EMP" and player.money >= price[k] and not player.upg["EMP"]:
-                            if player.upg.get("Weapon"):
-                                player.upg["Weapon"] = False
-                            player.money -= price[k]; player.upg["EMP"] = True
-                            player.emp_left = player.emp_max
-                            purchased = True
-                        elif player.money >= price[k] and not player.upg[k]:
-                            player.money -= price[k]; player.upg[k] = True
-                            purchased = True
+                    if k == "Weapon" and player.money >= price[k] and not player.upg["Weapon"]:
+                        player.money -= price[k]; player.upg["Weapon"] = True
+                        player.ammo = player.ammo_max
+                    elif k == "EMP" and player.money >= price[k] and not player.upg["EMP"]:
+                        player.money -= price[k]; player.upg["EMP"] = True
+                        player.emp_left = player.emp_max
+                    elif player.money >= price[k] and not player.upg[k]:
+                        player.money -= price[k]; player.upg[k] = True
                 if e.key == pygame.K_RETURN:
                     open_shop = False
         scr.fill(WHITE); y = 80
