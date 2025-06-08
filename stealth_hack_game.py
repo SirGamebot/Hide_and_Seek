@@ -704,8 +704,6 @@ def main_game():
             player.upg = {k: False for k in player.upg}
             player.ammo = 0; player.emp_left = 0
             shop(player, lvl); lvl += 1
-            if lvl > 10:
-                break
             current_level = Level(lvl)
             scr = pygame.display.set_mode((current_level.width, current_level.height))
             player.rect.center = get_player_spawn(current_level.rooms[0])
