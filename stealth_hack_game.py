@@ -552,6 +552,7 @@ def shop(player, lvl):
     price = {k: base[k] * lvl for k in base}; keys = list(base)
     scr = pygame.display.get_surface(); font = pygame.font.SysFont(None, 30); clk = pygame.time.Clock()
     open_shop = True
+    purchased = False
     while open_shop:
         for e in pygame.event.get():
             if e.type == pygame.QUIT:
@@ -559,18 +560,22 @@ def shop(player, lvl):
             if e.type == pygame.KEYDOWN:
                 if e.unicode in "1234":
                     k = keys[int(e.unicode) - 1]
-                    if k == "Weapon" and player.money >= price[k] and not player.upg["Weapon"]:
-                        if player.upg.get("EMP"):
-                            player.upg["EMP"] = False
-                        player.money -= price[k]; player.upg["Weapon"] = True
-                        player.ammo = player.ammo_max
-                    elif k == "EMP" and player.money >= price[k] and not player.upg["EMP"]:
-                        if player.upg.get("Weapon"):
-                            player.upg["Weapon"] = False
-                        player.money -= price[k]; player.upg["EMP"] = True
-                        player.emp_left = player.emp_max
-                    elif player.money >= price[k] and not player.upg[k]:
-                        player.money -= price[k]; player.upg[k] = True
+                    if not purchased:
+                        if k == "Weapon" and player.money >= price[k] and not player.upg["Weapon"]:
+                            if player.upg.get("EMP"):
+                                player.upg["EMP"] = False
+                            player.money -= price[k]; player.upg["Weapon"] = True
+                            player.ammo = player.ammo_max
+                            purchased = True
+                        elif k == "EMP" and player.money >= price[k] and not player.upg["EMP"]:
+                            if player.upg.get("Weapon"):
+                                player.upg["Weapon"] = False
+                            player.money -= price[k]; player.upg["EMP"] = True
+                            player.emp_left = player.emp_max
+                            purchased = True
+                        elif player.money >= price[k] and not player.upg[k]:
+                            player.money -= price[k]; player.upg[k] = True
+                            purchased = True
                 if e.key == pygame.K_RETURN:
                     open_shop = False
         scr.fill(WHITE); y = 80
@@ -700,6 +705,9 @@ def main_game():
         if current_level.all_hacked():
             rooms_done += current_level.n
             player.money += 50 * lvl
+            # Upgrades last only for one level
+            player.upg = {k: False for k in player.upg}
+            player.ammo = 0; player.emp_left = 0
             shop(player, lvl); lvl += 1
             if lvl > 10:
                 break
@@ -707,12 +715,7 @@ def main_game():
             scr = pygame.display.set_mode((current_level.width, current_level.height))
             player.rect.center = get_player_spawn(current_level.rooms[0])
         scr.fill(WHITE); current_level.draw(scr); player.draw(scr)
-        info = f"Lv:{lvl} Rooms:{rooms_done} $:{player.money}"
-        if player.upg.get("Weapon"):
-            info += f" Ammo:{player.ammo}"
-        if player.upg.get("EMP"):
-            info += f" EMP:{player.emp_left}"
-        draw_txt(scr, info, 24, (10, 10))
+        draw_txt(scr, f"Lv:{lvl}", 24, (25, 15))
         pygame.display.flip()
     update_leaderboard(rooms_done)
 
