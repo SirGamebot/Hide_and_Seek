@@ -324,24 +324,28 @@ class NPCGuard(pygame.sprite.Sprite):
         self.path = astar(s, g, blk, gw, gh); self.idx = 0; self.last_astar = pygame.time.get_ticks()
 
     def _move(self, vec, spd, walls):
-        """Move along vector while sliding on walls. Return True if moved."""
+        """Move along vector and slide along walls. Returns True if moved."""
         if vec.length() == 0:
             return False
         vec = vec.normalize() * spd
-        step_count = int(max(abs(vec.x), abs(vec.y))) + 1
-        step = pygame.math.Vector2(vec.x / step_count, vec.y / step_count)
+        dx, dy = int(round(vec.x)), int(round(vec.y))
         moved = False
-        for _ in range(step_count):
-            if step.x:
-                nx = self.rect.move(step.x, 0)
-                if not any(nx.colliderect(w) for w in walls):
-                    self.rect = nx
-                    moved = True
-            if step.y:
-                ny = self.rect.move(0, step.y)
-                if not any(ny.colliderect(w) for w in walls):
-                    self.rect = ny
-                    moved = True
+
+        diag = self.rect.move(dx, dy)
+        if not any(diag.colliderect(w) for w in walls):
+            self.rect = diag
+            return True
+
+        if dx:
+            nx = self.rect.move(dx, 0)
+            if not any(nx.colliderect(w) for w in walls):
+                self.rect = nx
+                moved = True
+        if dy:
+            ny = self.rect.move(0, dy)
+            if not any(ny.colliderect(w) for w in walls):
+                self.rect = ny
+                moved = True
         return moved
 
     def update(self, player, alarm, emp, walls, panic):
