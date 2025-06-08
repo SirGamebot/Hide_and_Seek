@@ -346,13 +346,15 @@ class NPCGuard(pygame.sprite.Sprite):
         attempts.append((p_dx, p_dy))
         attempts.append((-p_dx, -p_dy))
 
+        bounds = pygame.Rect(0, 0, current_level.width, current_level.height)
         for mx, my in attempts:
             if mx == 0 and my == 0:
                 continue
             cand = self.rect.move(mx, my)
+            if not bounds.contains(cand):
+                continue
             if not any(cand.colliderect(w) for w in walls):
                 self.rect = cand
-                self.rect.clamp_ip(pygame.Rect(0, 0, current_level.width, current_level.height))
                 return True
         return False
 
@@ -415,13 +417,26 @@ class Room:
         self.outer_walls = [pygame.Rect(0, 0, w, thick), pygame.Rect(0, h - thick, w, thick),
                             pygame.Rect(0, 0, thick, h), pygame.Rect(w - thick, 0, thick, h)]
         self.inner_walls = []
+        def near_corner(r1, r2, margin=8):
+            corners1 = [(r1.left, r1.top), (r1.right, r1.top), (r1.left, r1.bottom), (r1.right, r1.bottom)]
+            corners2 = [(r2.left, r2.top), (r2.right, r2.top), (r2.left, r2.bottom), (r2.right, r2.bottom)]
+            for c1 in corners1:
+                for c2 in corners2:
+                    if abs(c1[0] - c2[0]) < margin and abs(c1[1] - c2[1]) < margin:
+                        return True
+            return False
+
         for _ in range(total * 3):
-            if random.random() < .5:
-                ww, hh = random.randint(100, 300), random.randint(20, 50)
-            else:
-                hh, ww = random.randint(100, 300), random.randint(20, 50)
-            x = random.randint(50, w - 50 - ww); y = random.randint(50, h - 50 - hh)
-            self.inner_walls.append(pygame.Rect(x, y, ww, hh))
+            for _try in range(50):
+                if random.random() < .5:
+                    ww, hh = random.randint(100, 300), random.randint(20, 50)
+                else:
+                    hh, ww = random.randint(100, 300), random.randint(20, 50)
+                x = random.randint(50, w - 50 - ww); y = random.randint(50, h - 50 - hh)
+                cand = pygame.Rect(x, y, ww, hh)
+                if not any(near_corner(cand, ex) for ex in self.inner_walls):
+                    self.inner_walls.append(cand)
+                    break
         self.terminals = pygame.sprite.Group(
             *[Terminal(get_valid_position(30, 30, self.inner_walls, w, h)) for _ in range(guards)])
         self.npcs = pygame.sprite.Group()
