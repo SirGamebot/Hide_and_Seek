@@ -36,7 +36,7 @@ TILE = 20
 
 CHASE_TIMEOUT = 10_000
 PATH_COMMIT_MS = 300
-SAFE_RADIUS = 200  # min. Abstand Guard-Spawn ↔ Spieler-Spawn
+SAFE_RADIUS = 250  # min. Abstand Spawn ↔ Guards/Alarms
 
 WHITE = (255, 255, 255); BLACK = (0, 0, 0); RED = (255, 0, 0); GREEN = (0, 255, 0)
 BLUE = (0, 0, 255); GRAY = (128, 128, 128); YELLOW = (255, 255, 0); ORANGE = (255, 165, 0)
@@ -471,23 +471,32 @@ class Room:
                 if not any(near_corner(cand, ex) for ex in self.inner_walls):
                     self.inner_walls.append(cand)
                     break
-        self.terminals = pygame.sprite.Group(
-            *[Terminal(get_valid_position(30, 30, self.inner_walls, w, h)) for _ in range(guards)])
-        self.npcs = pygame.sprite.Group()
-        for _ in range(guards):
-            pos = get_valid_position(30, 30, self.inner_walls, w, h)
-            while pygame.math.Vector2(pos).distance_to(pl_spawn) < SAFE_RADIUS:
-                pos = get_valid_position(30, 30, self.inner_walls, w, h)
-            self.npcs.add(NPCGuard(pos))
-        self.cameras = pygame.sprite.Group(
-            *[Camera(get_valid_position(20, 20, self.inner_walls, w, h)) for _ in range(random.randint(1, 3))]
-        )
         self.doors = pygame.sprite.Group()
         dw, dh = 40, 80
         if idx < total - 1:
             self.doors.add(Door(w - thick - dw, (h - dh) // 2, dw, dh, "next"))
         if idx > 0:
             self.doors.add(Door(thick, (h - dh) // 2, dw, dh, "back"))
+
+        safe_points = [pl_spawn] + [d.rect.center for d in self.doors]
+
+        self.terminals = pygame.sprite.Group(
+            *[Terminal(get_valid_position(30, 30, self.inner_walls, w, h)) for _ in range(guards)])
+
+        self.npcs = pygame.sprite.Group()
+        for _ in range(guards):
+            pos = get_valid_position(30, 30, self.inner_walls, w, h)
+            while any(pygame.math.Vector2(pos).distance_to(sp) < SAFE_RADIUS for sp in safe_points):
+                pos = get_valid_position(30, 30, self.inner_walls, w, h)
+            self.npcs.add(NPCGuard(pos))
+
+        self.cameras = pygame.sprite.Group()
+        for _ in range(random.randint(1, 3)):
+            cpos = get_valid_position(20, 20, self.inner_walls, w, h)
+            while any(pygame.math.Vector2(cpos).distance_to(sp) < SAFE_RADIUS for sp in safe_points):
+                cpos = get_valid_position(20, 20, self.inner_walls, w, h)
+            self.cameras.add(Camera(cpos))
+
         self.bullets = pygame.sprite.Group()
         self.alarm = False; self.alarm_t = 0
         self.width = w; self.height = h
@@ -680,11 +689,26 @@ def main_game():
                     room = current_level.rooms[current_level.cur]
                     for d in room.doors:
                         if player.rect.colliderect(d.rect):
+                            # cancel hacking in the room being left
+                            for t in room.terminals:
+                                if t.hacking and not t.hacked:
+                                    t.hacking = False; t.start = 0; t.time = 4000
+
                             if d.destination == "next" and current_level.cur < len(current_level.rooms) - 1:
                                 current_level.cur += 1
+                                target_room = current_level.rooms[current_level.cur]
+                                spawn_door = next((dd for dd in target_room.doors if dd.destination == "back"), None)
                             elif d.destination == "back" and current_level.cur > 0:
                                 current_level.cur -= 1
-                            player.rect.center = get_player_spawn(current_level.rooms[current_level.cur])
+                                target_room = current_level.rooms[current_level.cur]
+                                spawn_door = next((dd for dd in target_room.doors if dd.destination == "next"), None)
+                            else:
+                                spawn_door = None
+
+                            if spawn_door:
+                                player.rect.center = spawn_door.rect.center
+                            else:
+                                player.rect.center = get_player_spawn(current_level.rooms[current_level.cur])
             elif e.type == pygame.MOUSEBUTTONDOWN and player.upg["Weapon"] and player.ammo > 0 and pygame.time.get_ticks() - player.last_shot >= player.reload_time:
                 vec = pygame.math.Vector2(pygame.mouse.get_pos()) - pygame.math.Vector2(player.rect.center) 
                 current_level.rooms[current_level.cur].bullets.add(Bullet(player.rect.center, vec))
