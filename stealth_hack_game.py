@@ -11,19 +11,25 @@ pygame.init()
 # ------------------------------------------------
 LB_FILE, LB_MAX = "leaderboard.txt", 5
 
-def load_leaderboard():
-    if not os.path.exists(LB_FILE):
+def _lb_file(mode: str | None = None) -> str:
+    return LB_FILE if mode is None else f"leaderboard_{mode}.txt"
+
+def load_leaderboard(mode: str | None = None):
+    fn = _lb_file(mode)
+    if not os.path.exists(fn):
         return []
-    with open(LB_FILE) as f:
+    with open(fn) as f:
         return [int(l) for l in f if l.strip().isdigit()]
 
-def save_leaderboard(scores: list[int]):
-    with open(LB_FILE, "w") as f:
+def save_leaderboard(scores: list[int], mode: str | None = None):
+    fn = _lb_file(mode)
+    with open(fn, "w") as f:
         for s in sorted(scores, reverse=True)[:LB_MAX]:
             f.write(f"{s}\n")
 
-def update_leaderboard(new: int):
-    sc = load_leaderboard(); sc.append(new); save_leaderboard(sc)
+def update_leaderboard(new: int, mode: str):
+    for m in (None, mode):
+        sc = load_leaderboard(m); sc.append(new); save_leaderboard(sc, m)
 
 # ------------------------------------------------
 # 1) Konstanten & Farben
@@ -36,7 +42,7 @@ TILE = 20
 
 CHASE_TIMEOUT = 10_000
 PATH_COMMIT_MS = 300
-SAFE_RADIUS = 250  # min. Abstand Spawn ↔ Guards/Alarms
+SAFE_RADIUS = 250  # will be tweaked per difficulty
 
 WHITE = (255, 255, 255); BLACK = (0, 0, 0); RED = (255, 0, 0); GREEN = (0, 255, 0)
 BLUE = (0, 0, 255); GRAY = (128, 128, 128); YELLOW = (255, 255, 0); ORANGE = (255, 165, 0)
@@ -49,24 +55,26 @@ LANG_FILE = "language.cfg"
 lang_texts = {
     "en": {"title": "Stealth Hack Game", "start": "Start Game", "leader": "Leaderboards",
             "ctrl": "Controls", "shopdesc": "Shop Info", "lang": "Change Language", "quit": "Quit",
+            "difficulty": "Difficulty", "easy": "Easy", "normal": "Normal", "hard": "Hardcore", "night": "Nightmare",
+            "next": "Press Enter for next level",
             "shop_info": "EMP - disable cameras briefly | Faster - hack twice as fast | Stealth - guards react slower | Weapon - shoot bullets",
-            "controls_text": "Move: W,A,S,D | Hack: H | EMP: E | Shoot: Space or Mouse | Door: O",
+            "controls_text": "Move: W,A,S,D or Arrows | Hack: H | EMP: E | Shoot: Space or Mouse | Door: O",
             "back": "ESC – back"},
     "de": {"title": "Stealth Hack Game", "start": "Spiel Starten", "leader": "Leaderboards",
             "ctrl": "Steuerungen", "shopdesc": "Shop Infos", "lang": "Sprache wechseln", "quit": "Beenden",
+            "difficulty": "Schwierigkeit", "easy": "Einfach", "normal": "Normal", "hard": "Hart", "night": "Albtraum",
+            "next": "Weiter mit Enter",
             "shop_info": "EMP - Kameras kurz deaktivieren | Schneller - halbiert Hackzeit | Stealth - Wächter sehen dich später | Waffe - ermöglicht Schießen",
-            "controls_text": "Bewegen: W,A,S,D | Hack: H | EMP: E | Schießen: Space oder Maus | Tür: O",
+            "controls_text": "Bewegen: W,A,S,D oder Pfeiltasten | Hack: H | EMP: E | Schießen: Space oder Maus | Tür: O",
             "back": "ESC – zurück"},
     "es": {"title": "Juego de Infiltración", "start": "Iniciar Juego", "leader": "Marcadores",
             "ctrl": "Controles", "shopdesc": "Info de Tienda", "lang": "Cambiar idioma", "quit": "Salir",
+            "difficulty": "Dificultad", "easy": "Fácil", "normal": "Normal", "hard": "Extremo", "night": "Pesadilla",
+            "next": "Pulsa Enter para continuar",
             "shop_info": "EMP - desactiva cámaras un momento | Rápido - hackeo más corto | Sigilo - guardias te detectan más lento | Arma - permite disparar",
-            "controls_text": "Mover: W,A,S,D | Hack: H | EMP: E | Disparar: Espacio o Ratón | Puerta: O",
+            "controls_text": "Mover: W,A,S,D o Flechas | Hack: H | EMP: E | Disparar: Espacio o Ratón | Puerta: O",
             "back": "ESC – volver"},
-    "fr": {"title": "Jeu d’Infiltration", "start": "Démarrer", "leader": "Scores",
-            "ctrl": "Commandes", "shopdesc": "Infos boutique", "lang": "Changer la langue", "quit": "Quitter",
-            "shop_info": "EMP - désactive les caméras un instant | Rapide - piratage deux fois plus vite | Furtif - les gardes te repèrent moins vite | Arme - permet de tirer",
-            "controls_text": "Bouger: W,A,S,D | Hacker: H | EMP: E | Tirer: Espace ou Souris | Porte: O",
-            "back": "ESC – retour"}
+    "fr": {"title": "Jeu d’Infiltration", "start": "Démarrer", "leader": "Scores", "ctrl": "Commandes", "shopdesc": "Infos boutique", "lang": "Changer la langue", "quit": "Quitter", "difficulty": "Difficulté", "easy": "Facile", "normal": "Normal", "hard": "Difficile", "night": "Cauchemar", "next": "Entrée pour continuer", "shop_info": "EMP - désactive les caméras un instant | Rapide - piratage deux fois plus vite | Furtif - les gardes te repèrent moins vite | Arme - permet de tirer", "controls_text": "Bouger: W,A,S,D ou Flèches | Hacker: H | EMP: E | Tirer: Espace ou Souris | Porte: O", "back": "ESC – retour"}
 }
 
 def load_language():
@@ -86,6 +94,37 @@ def save_language(code: str):
 
 
 current_language = load_language()
+
+# Difficulty settings
+DIFFICULTIES = {
+    "easy": {
+        "patrol": 1.5, "chase": 2.5, "obstacles": 1.5,
+        "guard_offset": 0, "door_lvl": 3, "safe": 250,
+        "ammo": 6, "emp": 4, "reload": 0.8, "emp_cd": 0.8,
+        "cam_rot": 0.5, "reward": 1.0
+    },
+    "normal": {
+        "patrol": 2.2, "chase": 3.2, "obstacles": 1.0,
+        "guard_offset": 1, "door_lvl": 2, "safe": 250,
+        "ammo": 5, "emp": 3, "reload": 1.0, "emp_cd": 1.0,
+        "cam_rot": 1.0, "reward": 1.0
+    },
+    "hardcore": {
+        "patrol": 2.2, "chase": 4.0, "obstacles": 0.7,
+        "guard_offset": 1, "door_lvl": 2, "safe": 180,
+        "ammo": 3, "emp": 2, "reload": 1.3, "emp_cd": 1.3,
+        "cam_rot": 2.0, "reward": 0.7
+    },
+    "nightmare": {
+        "patrol": 3.0, "chase": 5.0, "obstacles": 0.5,
+        "guard_offset": 1, "door_lvl": 2, "safe": 120,
+        "ammo": 0, "emp": 0, "reload": 1.5, "emp_cd": 1.5,
+        "cam_rot": 3.0, "reward": 0.5
+    }
+}
+difficulty_mode = "normal"
+def cfg(k):
+    return DIFFICULTIES[difficulty_mode][k]
 
 # ------------------------------------------------
 # 3) Geometrie / Sicht
@@ -207,18 +246,18 @@ class Player(pygame.sprite.Sprite):
         self.speed = 4
         self.money = 100
         self.upg = {"EMP": False, "Faster": False, "Stealth": False, "Weapon": False}
-        self.ammo_max = 5
+        self.ammo_max = cfg("ammo")
         self.ammo = 0
-        self.reload_time = 1000
+        self.reload_time = int(1000 * cfg("reload"))
         self.last_shot = 0
-        self.emp_max = 3
+        self.emp_max = cfg("emp")
         self.emp_left = 0
-        self.emp_cd = 3000
+        self.emp_cd = int(3000 * cfg("emp_cd"))
         self.last_emp = 0
 
     def update(self, keys):
-        dx = keys[pygame.K_d] - keys[pygame.K_a]
-        dy = keys[pygame.K_s] - keys[pygame.K_w]
+        dx = keys[pygame.K_d] + keys[pygame.K_RIGHT] - keys[pygame.K_a] - keys[pygame.K_LEFT]
+        dy = keys[pygame.K_s] + keys[pygame.K_DOWN] - keys[pygame.K_w] - keys[pygame.K_UP]
         self.rect.move_ip(dx * self.speed, dy * self.speed)
         self.rect.clamp_ip(pygame.Rect(0, 0, current_level.width, current_level.height))
 
@@ -300,10 +339,11 @@ class Camera(pygame.sprite.Sprite):
         self.rect = self.image.get_rect(center=pos)
         self.dir = pygame.math.Vector2(1, 0)
         self.vision = 200; self.angle = 45
+        self.rot_speed = cfg("cam_rot")
 
     def update(self, emp):
         if not emp:
-            self.dir = self.dir.rotate(1)
+            self.dir = self.dir.rotate(self.rot_speed)
 
     def detect(self, player, walls):
         end = visible_endpoint(self.rect.center, self.dir, self.vision, walls)
@@ -323,6 +363,8 @@ class NPCGuard(pygame.sprite.Sprite):
         self.image = pygame.Surface((30, 30)); self.image.fill(RED)
         self.rect = self.image.get_rect(center=pos)
         self.state = "patrol"
+        self.PATROL_SP = cfg("patrol")
+        self.CHASE_SP = cfg("chase")
         self.dir = self._rand_dir(); self.timer = 0
         self.path = []; self.idx = 0; self.last_astar = 0; self.chase_start = 0
         self.stun = False; self.stun_t = 0; self.STUN_MS = 3000
@@ -460,7 +502,7 @@ class Room:
                         return True
             return False
 
-        for _ in range(total * 3):
+        for _ in range(int(total * 3 * cfg("obstacles"))):
             for _try in range(50):
                 if random.random() < .5:
                     ww, hh = random.randint(100, 300), random.randint(20, 50)
@@ -486,14 +528,14 @@ class Room:
         self.npcs = pygame.sprite.Group()
         for _ in range(guards):
             pos = get_valid_position(30, 30, self.inner_walls, w, h)
-            while any(pygame.math.Vector2(pos).distance_to(sp) < SAFE_RADIUS for sp in safe_points):
+            while any(pygame.math.Vector2(pos).distance_to(sp) < cfg("safe") for sp in safe_points):
                 pos = get_valid_position(30, 30, self.inner_walls, w, h)
             self.npcs.add(NPCGuard(pos))
 
         self.cameras = pygame.sprite.Group()
         for _ in range(random.randint(1, 3)):
             cpos = get_valid_position(20, 20, self.inner_walls, w, h)
-            while any(pygame.math.Vector2(cpos).distance_to(sp) < SAFE_RADIUS for sp in safe_points):
+            while any(pygame.math.Vector2(cpos).distance_to(sp) < cfg("safe") for sp in safe_points):
                 cpos = get_valid_position(20, 20, self.inner_walls, w, h)
             self.cameras.add(Camera(cpos))
 
@@ -542,9 +584,11 @@ class Level:
         self.n = n
         self.width = min(BASE_W + (n - 1) * 100, MAX_W)
         self.height = min(BASE_H + (n - 1) * 50, MAX_H)
-        tmp = Room(self.width, self.height, n + 1, 0, n, (0, 0))
+        total_rooms = n if n >= cfg("door_lvl") else 1
+        guards = n + cfg("guard_offset")
+        tmp = Room(self.width, self.height, guards, 0, total_rooms, (0, 0))
         spawn = get_player_spawn(tmp)
-        self.rooms = [Room(self.width, self.height, n + 1, i, n, spawn) for i in range(n)]
+        self.rooms = [Room(self.width, self.height, guards, i, total_rooms, spawn) for i in range(total_rooms)]
         self.cur = 0
 
     def update(self, player, emp):
@@ -612,7 +656,12 @@ def simple_menu(scr, title, options):
 
 def show_leader(scr):
     t = lang_texts[current_language]
-    entries = sorted(load_leaderboard(), reverse=True)[:5] or ["---"]
+    opts = ["Overall", t["easy"], t["normal"], t["hard"], t["night"], t["back"]]
+    sel = simple_menu(scr, t["leader"], opts)
+    if sel == len(opts) - 1:
+        return
+    mode = None if sel == 0 else ["easy", "normal", "hardcore", "nightmare"][sel - 1]
+    entries = sorted(load_leaderboard(mode), reverse=True)[:5] or ["---"]
     simple_menu(scr, t["leader"], [f"{i+1}. {v}" for i, v in enumerate(entries)] + [t["back"]])
 
 
@@ -636,22 +685,32 @@ def lang_menu(scr):
         save_language(current_language)
 
 
+def difficulty_menu(scr):
+    global difficulty_mode
+    t = lang_texts[current_language]
+    opts = [t["easy"], t["normal"], t["hard"], t["night"], t["back"]]
+    sel = simple_menu(scr, t["difficulty"], opts)
+    if sel < 4:
+        difficulty_mode = ["easy", "normal", "hardcore", "nightmare"][sel]
+
 def main_menu():
     scr = pygame.display.set_mode((BASE_W, BASE_H))
     while True:
         t = lang_texts[current_language]
-        choice = simple_menu(scr, t["title"], [t["start"], t["leader"], t["ctrl"], t["shopdesc"], t["lang"], t["quit"]])
+        choice = simple_menu(scr, t["title"], [t["start"], t["difficulty"], t["leader"], t["ctrl"], t["shopdesc"], t["lang"], t["quit"]])
         if choice == 0:
             main_game()
         if choice == 1:
-            show_leader(scr)
+            difficulty_menu(scr)
         if choice == 2:
-            show_controls(scr)
+            show_leader(scr)
         if choice == 3:
-            show_shop_info(scr)
+            show_controls(scr)
         if choice == 4:
-            lang_menu(scr)
+            show_shop_info(scr)
         if choice == 5:
+            lang_menu(scr)
+        if choice == 6:
             pygame.quit(); sys.exit()
 
 # ------------------------------------------------
@@ -723,18 +782,21 @@ def main_game():
             running = False
         if current_level.all_hacked():
             rooms_done += current_level.n
-            player.money += 50 * lvl
-            # Upgrades last only for one level
+            player.money += int(50 * lvl * cfg("reward"))
             player.upg = {k: False for k in player.upg}
             player.ammo = 0; player.emp_left = 0
-            shop(player, lvl); lvl += 1
+            if difficulty_mode != "nightmare":
+                shop(player, lvl)
+            else:
+                simple_menu(scr, "", [lang_texts[current_language]["next"]])
+            lvl += 1
             current_level = Level(lvl)
             scr = pygame.display.set_mode((current_level.width, current_level.height))
             player.rect.center = get_player_spawn(current_level.rooms[0])
         scr.fill(WHITE); current_level.draw(scr); player.draw(scr)
         draw_txt(scr, f"Lv:{lvl}", 24, (25, 15))
         pygame.display.flip()
-    update_leaderboard(rooms_done)
+    update_leaderboard(rooms_done, difficulty_mode)
 
 # ------------------------------------------------
 if __name__ == "__main__":
