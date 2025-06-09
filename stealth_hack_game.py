@@ -203,6 +203,16 @@ def astar(s, g, blocked, gw, gh):
 def draw_txt(surf, txt, size, pos, color=BLACK):
     surf.blit(pygame.font.SysFont(None, size).render(txt, True, color), pos)
 
+
+def guard_collides_player(player: pygame.sprite.Sprite, guards: pygame.sprite.Group) -> bool:
+    """Return True if the player should die by touching a guard."""
+    for g in guards:
+        if player.rect.colliderect(g.rect):
+            if g.stun and difficulty_mode in ("easy", "normal"):
+                continue
+            return True
+    return False
+
 # ------------------------------------------------
 # 6) Spawn-Helpers
 # ------------------------------------------------
@@ -793,7 +803,7 @@ def main_game():
         if any(player.rect.colliderect(w) for w in current_level.rooms[current_level.cur].inner_walls):
             player.rect = old
         current_level.update(player, emp)
-        if pygame.sprite.spritecollideany(player, current_level.rooms[current_level.cur].npcs):
+        if guard_collides_player(player, current_level.rooms[current_level.cur].npcs):
             running = False
         if current_level.all_hacked():
             rooms_done += current_level.n
