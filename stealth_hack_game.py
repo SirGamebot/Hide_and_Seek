@@ -58,6 +58,7 @@ lang_texts = {
             "difficulty": "Difficulty", "easy": "Easy", "normal": "Normal", "hard": "Hardcore", "night": "Nightmare",
             "next": "Press Enter for next level",
             "shop_info": "EMP - disable cameras briefly | Faster - hack twice as fast | Stealth - guards react slower | Weapon - shoot bullets",
+            "faster": "Faster", "stealth": "Stealth", "weapon": "Weapon",
             "controls_text": "Move: W,A,S,D or Arrows | Hack: H | EMP: E | Shoot: Space or Mouse | Door: O",
             "back": "ESC – back"},
     "de": {"title": "Stealth Hack Game", "start": "Spiel Starten", "leader": "Leaderboards",
@@ -65,6 +66,7 @@ lang_texts = {
             "difficulty": "Schwierigkeit", "easy": "Einfach", "normal": "Normal", "hard": "Hart", "night": "Albtraum",
             "next": "Weiter mit Enter",
             "shop_info": "EMP - Kameras kurz deaktivieren | Schneller - halbiert Hackzeit | Stealth - Wächter sehen dich später | Waffe - ermöglicht Schießen",
+            "faster": "Schneller", "stealth": "Stealth", "weapon": "Waffe",
             "controls_text": "Bewegen: W,A,S,D oder Pfeiltasten | Hack: H | EMP: E | Schießen: Space oder Maus | Tür: O",
             "back": "ESC – zurück"},
     "es": {"title": "Juego de Infiltración", "start": "Iniciar Juego", "leader": "Marcadores",
@@ -72,9 +74,10 @@ lang_texts = {
             "difficulty": "Dificultad", "easy": "Fácil", "normal": "Normal", "hard": "Extremo", "night": "Pesadilla",
             "next": "Pulsa Enter para continuar",
             "shop_info": "EMP - desactiva cámaras un momento | Rápido - hackeo más corto | Sigilo - guardias te detectan más lento | Arma - permite disparar",
+            "faster": "Rápido", "stealth": "Sigilo", "weapon": "Arma",
             "controls_text": "Mover: W,A,S,D o Flechas | Hack: H | EMP: E | Disparar: Espacio o Ratón | Puerta: O",
             "back": "ESC – volver"},
-    "fr": {"title": "Jeu d’Infiltration", "start": "Démarrer", "leader": "Scores", "ctrl": "Commandes", "shopdesc": "Infos boutique", "lang": "Changer la langue", "quit": "Quitter", "difficulty": "Difficulté", "easy": "Facile", "normal": "Normal", "hard": "Difficile", "night": "Cauchemar", "next": "Entrée pour continuer", "shop_info": "EMP - désactive les caméras un instant | Rapide - piratage deux fois plus vite | Furtif - les gardes te repèrent moins vite | Arme - permet de tirer", "controls_text": "Bouger: W,A,S,D ou Flèches | Hacker: H | EMP: E | Tirer: Espace ou Souris | Porte: O", "back": "ESC – retour"}
+    "fr": {"title": "Jeu d’Infiltration", "start": "Démarrer", "leader": "Scores", "ctrl": "Commandes", "shopdesc": "Infos boutique", "lang": "Changer la langue", "quit": "Quitter", "difficulty": "Difficulté", "easy": "Facile", "normal": "Normal", "hard": "Difficile", "night": "Cauchemar", "next": "Entrée pour continuer", "shop_info": "EMP - désactive les caméras un instant | Rapide - piratage deux fois plus vite | Furtif - les gardes te repèrent moins vite | Arme - permet de tirer", "faster": "Rapide", "stealth": "Furtif", "weapon": "Arme", "controls_text": "Bouger: W,A,S,D ou Flèches | Hacker: H | EMP: E | Tirer: Espace ou Souris | Porte: O", "back": "ESC – retour"}
 }
 
 def load_language():
@@ -607,6 +610,13 @@ class Level:
 def shop(player, lvl):
     base = {"EMP": 50, "Faster": 30, "Stealth": 40, "Weapon": 60}
     price = {k: base[k] * lvl for k in base}; keys = list(base)
+    t = lang_texts[current_language]
+    name = {
+        "EMP": "EMP",
+        "Faster": t.get("faster", "Faster"),
+        "Stealth": t.get("stealth", "Stealth"),
+        "Weapon": t.get("weapon", "Weapon"),
+    }
     scr = pygame.display.get_surface(); font = pygame.font.SysFont(None, 30); clk = pygame.time.Clock()
     open_shop = True
     while open_shop:
@@ -628,13 +638,13 @@ def shop(player, lvl):
                     open_shop = False
         scr.fill(WHITE); y = 80
         for i, k in enumerate(keys):
-            scr.blit(font.render(f"{i+1}) {k} – {price[k]}", True, BLACK), (50, y)); y += 35
+            scr.blit(font.render(f"{i+1}) {name[k]} – {price[k]}", True, BLACK), (50, y)); y += 35
         scr.blit(font.render(f"Money: {player.money}", True, BLACK), (50, y + 20))
         pygame.display.flip(); clk.tick(30)
 
 
-def simple_menu(scr, title, options):
-    sel = 0
+def simple_menu(scr, title, options, start=0):
+    sel = start
     while True:
         scr.fill(WHITE); draw_txt(scr, title, 50, (50, 40))
         for i, opt in enumerate(options):
@@ -656,13 +666,18 @@ def simple_menu(scr, title, options):
 
 def show_leader(scr):
     t = lang_texts[current_language]
-    opts = ["Overall", t["easy"], t["normal"], t["hard"], t["night"], t["back"]]
-    sel = simple_menu(scr, t["leader"], opts)
-    if sel == len(opts) - 1:
-        return
-    mode = None if sel == 0 else ["easy", "normal", "hardcore", "nightmare"][sel - 1]
-    entries = sorted(load_leaderboard(mode), reverse=True)[:5] or ["---"]
-    simple_menu(scr, t["leader"], [f"{i+1}. {v}" for i, v in enumerate(entries)] + [t["back"]])
+    while True:
+        opts = ["Overall", t["easy"], t["normal"], t["hard"], t["night"], t["back"]]
+        sel = simple_menu(scr, t["leader"], opts)
+        if sel == len(opts) - 1:
+            return
+        mode = None if sel == 0 else ["easy", "normal", "hardcore", "nightmare"][sel - 1]
+        entries = sorted(load_leaderboard(mode), reverse=True)[:5] or ["---"]
+        back = simple_menu(scr, t["leader"], [f"{i+1}. {v}" for i, v in enumerate(entries)] + [t["back"]])
+        if back == len(entries):
+            continue
+        else:
+            return
 
 
 def show_controls(scr):
@@ -689,7 +704,7 @@ def difficulty_menu(scr):
     global difficulty_mode
     t = lang_texts[current_language]
     opts = [t["easy"], t["normal"], t["hard"], t["night"], t["back"]]
-    sel = simple_menu(scr, t["difficulty"], opts)
+    sel = simple_menu(scr, t["difficulty"], opts, start=1)
     if sel < 4:
         difficulty_mode = ["easy", "normal", "hardcore", "nightmare"][sel]
 
