@@ -58,7 +58,7 @@ lang_texts = {
             "difficulty": "Difficulty", "easy": "Easy", "normal": "Normal", "hard": "Hardcore", "night": "Nightmare",
             "next": "Press Enter for next level",
             "shop_info": "EMP - disable cameras briefly | Faster - hack twice as fast | Stealth - guards react slower | Weapon - shoot bullets",
-            "faster": "Faster", "stealth": "Stealth", "weapon": "Weapon",
+            "faster": "Faster", "stealth": "Stealth", "weapon": "Weapon", "money": "Money",
             "controls_text": "Move: W,A,S,D or Arrows | Hack: H | EMP: E | Shoot: Space or Mouse | Door: O",
             "back": "ESC – back"},
     "de": {"title": "Stealth Hack Game", "start": "Spiel Starten", "leader": "Leaderboards",
@@ -66,7 +66,7 @@ lang_texts = {
             "difficulty": "Schwierigkeit", "easy": "Einfach", "normal": "Normal", "hard": "Hart", "night": "Albtraum",
             "next": "Weiter mit Enter",
             "shop_info": "EMP - Kameras kurz deaktivieren | Schneller - halbiert Hackzeit | Stealth - Wächter sehen dich später | Waffe - ermöglicht Schießen",
-            "faster": "Schneller", "stealth": "Stealth", "weapon": "Waffe",
+            "faster": "Schneller", "stealth": "Stealth", "weapon": "Waffe", "money": "Geld",
             "controls_text": "Bewegen: W,A,S,D oder Pfeiltasten | Hack: H | EMP: E | Schießen: Space oder Maus | Tür: O",
             "back": "ESC – zurück"},
     "es": {"title": "Juego de Infiltración", "start": "Iniciar Juego", "leader": "Marcadores",
@@ -74,10 +74,10 @@ lang_texts = {
             "difficulty": "Dificultad", "easy": "Fácil", "normal": "Normal", "hard": "Extremo", "night": "Pesadilla",
             "next": "Pulsa Enter para continuar",
             "shop_info": "EMP - desactiva cámaras un momento | Rápido - hackeo más corto | Sigilo - guardias te detectan más lento | Arma - permite disparar",
-            "faster": "Rápido", "stealth": "Sigilo", "weapon": "Arma",
+            "faster": "Rápido", "stealth": "Sigilo", "weapon": "Arma", "money": "Dinero",
             "controls_text": "Mover: W,A,S,D o Flechas | Hack: H | EMP: E | Disparar: Espacio o Ratón | Puerta: O",
             "back": "ESC – volver"},
-    "fr": {"title": "Jeu d’Infiltration", "start": "Démarrer", "leader": "Scores", "ctrl": "Commandes", "shopdesc": "Infos boutique", "lang": "Changer la langue", "quit": "Quitter", "difficulty": "Difficulté", "easy": "Facile", "normal": "Normal", "hard": "Difficile", "night": "Cauchemar", "next": "Entrée pour continuer", "shop_info": "EMP - désactive les caméras un instant | Rapide - piratage deux fois plus vite | Furtif - les gardes te repèrent moins vite | Arme - permet de tirer", "faster": "Rapide", "stealth": "Furtif", "weapon": "Arme", "controls_text": "Bouger: W,A,S,D ou Flèches | Hacker: H | EMP: E | Tirer: Espace ou Souris | Porte: O", "back": "ESC – retour"}
+    "fr": {"title": "Jeu d’Infiltration", "start": "Démarrer", "leader": "Scores", "ctrl": "Commandes", "shopdesc": "Infos boutique", "lang": "Changer la langue", "quit": "Quitter", "difficulty": "Difficulté", "easy": "Facile", "normal": "Normal", "hard": "Difficile", "night": "Cauchemar", "next": "Entrée pour continuer", "shop_info": "EMP - désactive les caméras un instant | Rapide - piratage deux fois plus vite | Furtif - les gardes te repèrent moins vite | Arme - permet de tirer", "faster": "Rapide", "stealth": "Furtif", "weapon": "Arme", "money": "Argent", "controls_text": "Bouger: W,A,S,D ou Flèches | Hacker: H | EMP: E | Tirer: Espace ou Souris | Porte: O", "back": "ESC – retour"}
 }
 
 def load_language():
@@ -649,7 +649,7 @@ def shop(player, lvl):
         scr.fill(WHITE); y = 80
         for i, k in enumerate(keys):
             scr.blit(font.render(f"{i+1}) {name[k]} – {price[k]}", True, BLACK), (50, y)); y += 35
-        scr.blit(font.render(f"Money: {player.money}", True, BLACK), (50, y + 20))
+        scr.blit(font.render(f"{t.get('money', 'Money')}: {player.money}", True, BLACK), (50, y + 20))
         pygame.display.flip(); clk.tick(30)
 
 
