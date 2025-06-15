@@ -554,7 +554,8 @@ class Room:
             r = door_rect(back_side, w, h, thick)
             self.doors.add(Door(r.x, r.y, r.width, r.height, "back"))
 
-        safe_points = [pl_spawn] + [d.rect.center for d in self.doors]
+        self.pl_spawn = pl_spawn
+        safe_points = [self.pl_spawn] + [d.rect.center for d in self.doors]
 
         self.terminals = pygame.sprite.Group(
             *[Terminal(get_valid_position(30, 30, self.inner_walls, w, h)) for _ in range(guards)])
@@ -576,6 +577,19 @@ class Room:
         self.bullets = pygame.sprite.Group()
         self.alarm = False; self.alarm_t = 0
         self.width = w; self.height = h
+
+    def respawn_guards(self):
+        """Teleport all guards to new random positions away from doors."""
+        safe_points = [self.pl_spawn] + [d.rect.center for d in self.doors]
+        for g in self.npcs:
+            pos = get_valid_position(30, 30, self.inner_walls, self.width, self.height)
+            while any(pygame.math.Vector2(pos).distance_to(sp) < cfg("safe") for sp in safe_points):
+                pos = get_valid_position(30, 30, self.inner_walls, self.width, self.height)
+            g.rect.center = pos
+            g.state = "patrol"
+            g.dir = g._rand_dir()
+            g.path = []
+            g.idx = 0
 
     def update(self, player, emp):
         all_walls = self.outer_walls + self.inner_walls
@@ -821,15 +835,19 @@ def main_game():
                                     t.hacking = False; t.start = 0; t.time = 4000
 
                             if d.destination == "next" and current_level.cur < len(current_level.rooms) - 1:
-                                current_level.cur += 1
-                                target_room = current_level.rooms[current_level.cur]
+                                next_idx = current_level.cur + 1
+                                target_room = current_level.rooms[next_idx]
                                 spawn_door = next((dd for dd in target_room.doors if dd.destination == "back"), None)
                             elif d.destination == "back" and current_level.cur > 0:
-                                current_level.cur -= 1
-                                target_room = current_level.rooms[current_level.cur]
+                                next_idx = current_level.cur - 1
+                                target_room = current_level.rooms[next_idx]
                                 spawn_door = next((dd for dd in target_room.doors if dd.destination == "next"), None)
                             else:
+                                next_idx = current_level.cur
                                 spawn_door = None
+
+                            room.respawn_guards()
+                            current_level.cur = next_idx
 
                             if spawn_door:
                                 player.rect.center = spawn_door.rect.center
