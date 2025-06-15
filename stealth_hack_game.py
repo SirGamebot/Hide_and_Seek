@@ -500,8 +500,22 @@ class NPCGuard(pygame.sprite.Sprite):
 # 9) Room & Level
 # ------------------------------------------------
 
+def door_rect(side, w, h, thick, dw=40, dh=80):
+    if side == "right":
+        return pygame.Rect(w - thick - dw, (h - dh) // 2, dw, dh)
+    if side == "left":
+        return pygame.Rect(thick, (h - dh) // 2, dw, dh)
+    if side == "top":
+        return pygame.Rect((w - dh) // 2, thick, dh, dw)
+    if side == "bottom":
+        return pygame.Rect((w - dh) // 2, h - thick - dw, dh, dw)
+
+def opposite(side):
+    return {"right": "left", "left": "right", "top": "bottom", "bottom": "top"}[side]
+
+
 class Room:
-    def __init__(self, w, h, guards, idx, total, pl_spawn):
+    def __init__(self, w, h, guards, idx, total, pl_spawn, back_side=None, next_side=None):
         thick = 15
         self.outer_walls = [pygame.Rect(0, 0, w, thick), pygame.Rect(0, h - thick, w, thick),
                             pygame.Rect(0, 0, thick, h), pygame.Rect(w - thick, 0, thick, h)]
@@ -515,6 +529,12 @@ class Room:
                         return True
             return False
 
+        door_areas = []
+        if next_side:
+            door_areas.append(door_rect(next_side, w, h, thick))
+        if back_side:
+            door_areas.append(door_rect(back_side, w, h, thick))
+
         for _ in range(int(total * 3 * cfg("obstacles"))):
             for _try in range(50):
                 if random.random() < .5:
@@ -523,15 +543,16 @@ class Room:
                     hh, ww = random.randint(100, 300), random.randint(20, 50)
                 x = random.randint(50, w - 50 - ww); y = random.randint(50, h - 50 - hh)
                 cand = pygame.Rect(x, y, ww, hh)
-                if not any(near_corner(cand, ex) for ex in self.inner_walls):
+                if not any(near_corner(cand, ex) for ex in self.inner_walls) and not any(cand.colliderect(dr) for dr in door_areas):
                     self.inner_walls.append(cand)
                     break
         self.doors = pygame.sprite.Group()
-        dw, dh = 40, 80
-        if idx < total - 1:
-            self.doors.add(Door(w - thick - dw, (h - dh) // 2, dw, dh, "next"))
-        if idx > 0:
-            self.doors.add(Door(thick, (h - dh) // 2, dw, dh, "back"))
+        if idx < total - 1 and next_side:
+            r = door_rect(next_side, w, h, thick)
+            self.doors.add(Door(r.x, r.y, r.width, r.height, "next"))
+        if idx > 0 and back_side:
+            r = door_rect(back_side, w, h, thick)
+            self.doors.add(Door(r.x, r.y, r.width, r.height, "back"))
 
         safe_points = [pl_spawn] + [d.rect.center for d in self.doors]
 
@@ -597,11 +618,22 @@ class Level:
         self.n = n
         self.width = min(BASE_W + (n - 1) * 100, MAX_W)
         self.height = min(BASE_H + (n - 1) * 50, MAX_H)
-        total_rooms = n if n >= cfg("door_lvl") else 1
+        if n <= 5:
+            total_rooms = n
+        else:
+            total_rooms = random.randint(5, 7)
         guards = n + cfg("guard_offset")
-        tmp = Room(self.width, self.height, guards, 0, total_rooms, (0, 0))
+
+        door_sides = [random.choice(["left", "right", "top", "bottom"]) for _ in range(max(0, total_rooms - 1))]
+
+        tmp = Room(self.width, self.height, guards, 0, total_rooms, (0, 0), None,
+                   door_sides[0] if door_sides else None)
         spawn = get_player_spawn(tmp)
-        self.rooms = [Room(self.width, self.height, guards, i, total_rooms, spawn) for i in range(total_rooms)]
+        self.rooms = []
+        for i in range(total_rooms):
+            back = opposite(door_sides[i - 1]) if i > 0 else None
+            nxt = door_sides[i] if i < total_rooms - 1 else None
+            self.rooms.append(Room(self.width, self.height, guards, i, total_rooms, spawn, back, nxt))
         self.cur = 0
 
     def update(self, player, emp):
