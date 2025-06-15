@@ -598,7 +598,7 @@ class Room:
             t.update()
         for c in self.cameras:
             c.update(emp)
-            if c.detect(player, all_walls):
+            if not emp and c.detect(player, all_walls):
                 self.alarm = True; self.alarm_t = pygame.time.get_ticks()
         for g in self.npcs:
             before = self.alarm
