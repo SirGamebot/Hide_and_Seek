@@ -638,17 +638,21 @@ class Level:
             total_rooms = random.randint(5, 7)
         guards = n + cfg("guard_offset")
 
-        door_sides = []
-        prev = None
-        for _ in range(max(0, total_rooms - 1)):
-            choices = ["left", "right", "top", "bottom"]
-            if prev:
-                opp = opposite(prev)
-                if opp in choices:
-                    choices.remove(opp)
-            side = random.choice(choices)
-            door_sides.append(side)
-            prev = side
+        def make_sides(cnt):
+            sides = []
+            prev = None
+            for _ in range(cnt):
+                opts = ["left", "right", "top", "bottom"]
+                if prev:
+                    opp = opposite(prev)
+                    if opp in opts:
+                        opts.remove(opp)
+                side = random.choice(opts)
+                sides.append(side)
+                prev = side
+            return sides
+
+        door_sides = make_sides(max(0, total_rooms - 1))
 
         tmp = Room(self.width, self.height, guards, 0, total_rooms, (0, 0), None,
                    door_sides[0] if door_sides else None)
@@ -684,6 +688,7 @@ def shop(player, lvl):
         "Weapon": t.get("weapon", "Weapon"),
     }
     scr = pygame.display.get_surface(); font = pygame.font.SysFont(None, 30); clk = pygame.time.Clock()
+    pygame.event.clear()
     open_shop = True
     while open_shop:
         for e in pygame.event.get():
@@ -707,6 +712,7 @@ def shop(player, lvl):
             scr.blit(font.render(f"{i+1}) {name[k]} – {price[k]}", True, BLACK), (50, y)); y += 35
         scr.blit(font.render(f"{t.get('money', 'Money')}: {player.money}", True, BLACK), (50, y + 20))
         pygame.display.flip(); clk.tick(30)
+    pygame.event.clear()
 
 
 def simple_menu(scr, title, options, start=0):
