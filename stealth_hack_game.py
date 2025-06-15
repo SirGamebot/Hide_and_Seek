@@ -268,11 +268,29 @@ class Player(pygame.sprite.Sprite):
         self.emp_cd = int(3000 * cfg("emp_cd"))
         self.last_emp = 0
 
-    def update(self, keys):
+    def update(self, keys, walls):
         dx = keys[pygame.K_d] + keys[pygame.K_RIGHT] - keys[pygame.K_a] - keys[pygame.K_LEFT]
         dy = keys[pygame.K_s] + keys[pygame.K_DOWN] - keys[pygame.K_w] - keys[pygame.K_UP]
-        self.rect.move_ip(dx * self.speed, dy * self.speed)
-        self.rect.clamp_ip(pygame.Rect(0, 0, current_level.width, current_level.height))
+
+        rect = self.rect
+        if dx or dy:
+            step_x = dx * self.speed
+            step_y = dy * self.speed
+
+            cand = rect.move(step_x, step_y)
+            if not any(cand.colliderect(w) for w in walls):
+                rect = cand
+            else:
+                if step_x:
+                    tmp = rect.move(step_x, 0)
+                    if not any(tmp.colliderect(w) for w in walls):
+                        rect = tmp
+                if step_y:
+                    tmp = rect.move(0, step_y)
+                    if not any(tmp.colliderect(w) for w in walls):
+                        rect = tmp
+        rect.clamp_ip(pygame.Rect(0, 0, current_level.width, current_level.height))
+        self.rect = rect
 
     def draw(self, s):
         s.blit(self.image, self.rect)
@@ -652,7 +670,10 @@ class Level:
                 prev = side
             return sides
 
-        door_sides = make_sides(max(0, total_rooms - 1))
+        needed = max(0, total_rooms - 1)
+        door_sides = make_sides(needed)
+        while len(door_sides) < needed:
+            door_sides += make_sides(needed - len(door_sides))
 
         tmp = Room(self.width, self.height, guards, 0, total_rooms, (0, 0), None,
                    door_sides[0] if door_sides else None)
@@ -865,9 +886,8 @@ def main_game():
                 player.ammo -= 1
                 player.last_shot = pygame.time.get_ticks()
         emp = emp and pygame.time.get_ticks() - emp_t < 2000
-        old = player.rect.copy(); player.update(pygame.key.get_pressed())
-        if any(player.rect.colliderect(w) for w in current_level.rooms[current_level.cur].inner_walls):
-            player.rect = old
+        walls = current_level.rooms[current_level.cur].inner_walls
+        player.update(pygame.key.get_pressed(), walls)
         current_level.update(player, emp)
         if guard_collides_player(player, current_level.rooms[current_level.cur].npcs):
             running = False
