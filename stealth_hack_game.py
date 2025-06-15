@@ -624,7 +624,17 @@ class Level:
             total_rooms = random.randint(5, 7)
         guards = n + cfg("guard_offset")
 
-        door_sides = [random.choice(["left", "right", "top", "bottom"]) for _ in range(max(0, total_rooms - 1))]
+        door_sides = []
+        prev = None
+        for _ in range(max(0, total_rooms - 1)):
+            choices = ["left", "right", "top", "bottom"]
+            if prev:
+                opp = opposite(prev)
+                if opp in choices:
+                    choices.remove(opp)
+            side = random.choice(choices)
+            door_sides.append(side)
+            prev = side
 
         tmp = Room(self.width, self.height, guards, 0, total_rooms, (0, 0), None,
                    door_sides[0] if door_sides else None)
