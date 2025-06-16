@@ -110,28 +110,28 @@ DIFFICULTIES = {
         "guard_offset": 0, "door_lvl": 3, "safe": 250,
         "ammo": 6, "emp": 4, "reload": 0.8, "emp_cd": 0.8,
         "cam_rot": 0.5, "reward": 1.0,
-        "special": 1, "tele_ms": 2000, "bomb_cd": 4000, "bomb_delay": 3000
+        "special": 1, "tele_ms": 2000, "bomb_cd": 4000, "bomb_delay": 2500
     },
     "normal": {
         "patrol": 2.2, "chase": 3.2, "obstacles": 1.0,
         "guard_offset": 1, "door_lvl": 2, "safe": 250,
         "ammo": 5, "emp": 3, "reload": 1.0, "emp_cd": 1.0,
         "cam_rot": 1.0, "reward": 1.0,
-        "special": 2, "tele_ms": 1500, "bomb_cd": 3000, "bomb_delay": 2500
+        "special": 2, "tele_ms": 1500, "bomb_cd": 3000, "bomb_delay": 2000
     },
     "hardcore": {
         "patrol": 2.2, "chase": 4.0, "obstacles": 0.7,
         "guard_offset": 1, "door_lvl": 2, "safe": 180,
         "ammo": 3, "emp": 2, "reload": 1.3, "emp_cd": 1.3,
         "cam_rot": 2.0, "reward": 0.7,
-        "special": 3, "tele_ms": 1000, "bomb_cd": 2500, "bomb_delay": 1500
+        "special": 3, "tele_ms": 1000, "bomb_cd": 2500, "bomb_delay": 1200
     },
     "nightmare": {
         "patrol": 3.0, "chase": 5.0, "obstacles": 0.5,
         "guard_offset": 1, "door_lvl": 2, "safe": 120,
         "ammo": 0, "emp": 0, "reload": 1.5, "emp_cd": 1.5,
         "cam_rot": 3.0, "reward": 0.5,
-        "special": 99, "tele_ms": 700, "bomb_cd": 2000, "bomb_delay": 1000
+        "special": 99, "tele_ms": 700, "bomb_cd": 2000, "bomb_delay": 800
     }
 }
 difficulty_mode = "normal"
@@ -546,13 +546,13 @@ class FakeGuard(NPCGuard):
         self.behave_timer -= 16
         if self.behave_timer <= 0:
             r = random.random()
-            if r < 0.4:
-                self.mode = "approach"; self.behave_timer = random.randint(600, 1200)
-            elif r < 0.8:
-                self.mode = "wander"; self.behave_timer = random.randint(600, 1200)
+            if r < 0.45:
+                self.mode = "approach"; self.behave_timer = random.randint(500, 1000)
+            elif r < 0.9:
+                self.mode = "wander"; self.behave_timer = random.randint(500, 1000)
                 self.target = random.choice(list(self.terminals))
             else:
-                self.mode = "idle"; self.behave_timer = random.randint(400, 800)
+                self.mode = "idle"; self.behave_timer = random.randint(300, 500)
 
         if self.mode == "approach":
             vec = pygame.math.Vector2(player.rect.center) - pygame.math.Vector2(self.rect.center)
@@ -564,7 +564,7 @@ class FakeGuard(NPCGuard):
                 self.target = random.choice(list(self.terminals))
             vec = pygame.math.Vector2(self.target.rect.center) - pygame.math.Vector2(self.rect.center)
             if vec.length() < 5:
-                self.wait = random.randint(400, 800)
+                self.wait = random.randint(200, 400)
                 self.target = random.choice(list(self.terminals))
             else:
                 self._move(vec, self.PATROL_SP, walls)
@@ -645,7 +645,7 @@ class BomberGuard(NPCGuard):
 
     def draw(self, s):
         blink = self.exploding and ((pygame.time.get_ticks() - self.exp_start) // 100) % 2 == 0
-        col = RED if blink else BLACK
+        col = RED if blink else YELLOW
         pygame.draw.circle(s, col, self.rect.center, self.radius)
         super().draw(s)
 
