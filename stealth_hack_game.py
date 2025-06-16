@@ -56,6 +56,7 @@ lang_texts = {
     "en": {"title": "Stealth Hack Game", "start": "Start Game", "leader": "Leaderboards",
             "ctrl": "Controls", "shopdesc": "Shop Info", "lang": "Change Language", "quit": "Quit",
             "difficulty": "Difficulty", "easy": "Easy", "normal": "Normal", "hard": "Hardcore", "night": "Nightmare",
+            "settings": "Settings", "fake": "Fake Guard", "tele": "Teleport Guard", "bomber": "Bomber Guard", "on": "On", "off": "Off",
             "next": "Press Enter for next level",
             "shop_info": "EMP - disable cameras briefly | Faster - hack twice as fast | Stealth - guards react slower | Weapon - shoot bullets",
             "faster": "Faster", "stealth": "Stealth", "weapon": "Weapon", "money": "Money",
@@ -64,6 +65,7 @@ lang_texts = {
     "de": {"title": "Stealth Hack Game", "start": "Spiel Starten", "leader": "Leaderboards",
             "ctrl": "Steuerungen", "shopdesc": "Shop Infos", "lang": "Sprache wechseln", "quit": "Beenden",
             "difficulty": "Schwierigkeit", "easy": "Einfach", "normal": "Normal", "hard": "Hart", "night": "Albtraum",
+            "settings": "Einstellungen", "fake": "Fake-Wächter", "tele": "Teleport-Wächter", "bomber": "Bomber-Wächter", "on": "An", "off": "Aus",
             "next": "Weiter mit Enter",
             "shop_info": "EMP - Kameras kurz deaktivieren | Schneller - halbiert Hackzeit | Stealth - Wächter sehen dich später | Waffe - ermöglicht Schießen",
             "faster": "Schneller", "stealth": "Stealth", "weapon": "Waffe", "money": "Geld",
@@ -72,12 +74,15 @@ lang_texts = {
     "es": {"title": "Juego de Infiltración", "start": "Iniciar Juego", "leader": "Marcadores",
             "ctrl": "Controles", "shopdesc": "Info de Tienda", "lang": "Cambiar idioma", "quit": "Salir",
             "difficulty": "Dificultad", "easy": "Fácil", "normal": "Normal", "hard": "Extremo", "night": "Pesadilla",
+            "settings": "Opciones", "fake": "Guardia Falso", "tele": "Guardia Teleport", "bomber": "Guardia Bomba", "on": "Sí", "off": "No",
             "next": "Pulsa Enter para continuar",
             "shop_info": "EMP - desactiva cámaras un momento | Rápido - hackeo más corto | Sigilo - guardias te detectan más lento | Arma - permite disparar",
             "faster": "Rápido", "stealth": "Sigilo", "weapon": "Arma", "money": "Dinero",
             "controls_text": "Mover: W,A,S,D o Flechas | Hack: H | EMP: E | Disparar: Espacio o Ratón | Puerta: O",
             "back": "ESC – volver"},
-    "fr": {"title": "Jeu d’Infiltration", "start": "Démarrer", "leader": "Scores", "ctrl": "Commandes", "shopdesc": "Infos boutique", "lang": "Changer la langue", "quit": "Quitter", "difficulty": "Difficulté", "easy": "Facile", "normal": "Normal", "hard": "Difficile", "night": "Cauchemar", "next": "Entrée pour continuer", "shop_info": "EMP - désactive les caméras un instant | Rapide - piratage deux fois plus vite | Furtif - les gardes te repèrent moins vite | Arme - permet de tirer", "faster": "Rapide", "stealth": "Furtif", "weapon": "Arme", "money": "Argent", "controls_text": "Bouger: W,A,S,D ou Flèches | Hacker: H | EMP: E | Tirer: Espace ou Souris | Porte: O", "back": "ESC – retour"}
+    "fr": {"title": "Jeu d’Infiltration", "start": "Démarrer", "leader": "Scores", "ctrl": "Commandes", "shopdesc": "Infos boutique", "lang": "Changer la langue", "quit": "Quitter", "difficulty": "Difficulté", "easy": "Facile", "normal": "Normal", "hard": "Difficile", "night": "Cauchemar",
+            "settings": "Options", "fake": "Faux garde", "tele": "Garde téléporteur", "bomber": "Garde bombe", "on": "Oui", "off": "Non",
+            "next": "Entrée pour continuer", "shop_info": "EMP - désactive les caméras un instant | Rapide - piratage deux fois plus vite | Furtif - les gardes te repèrent moins vite | Arme - permet de tirer", "faster": "Rapide", "stealth": "Furtif", "weapon": "Arme", "money": "Argent", "controls_text": "Bouger: W,A,S,D ou Flèches | Hacker: H | EMP: E | Tirer: Espace ou Souris | Porte: O", "back": "ESC – retour"}
 }
 
 def load_language():
@@ -104,28 +109,33 @@ DIFFICULTIES = {
         "patrol": 1.5, "chase": 2.5, "obstacles": 1.5,
         "guard_offset": 0, "door_lvl": 3, "safe": 250,
         "ammo": 6, "emp": 4, "reload": 0.8, "emp_cd": 0.8,
-        "cam_rot": 0.5, "reward": 1.0
+        "cam_rot": 0.5, "reward": 1.0,
+        "special": 1, "tele_ms": 2000, "bomb_cd": 4000
     },
     "normal": {
         "patrol": 2.2, "chase": 3.2, "obstacles": 1.0,
         "guard_offset": 1, "door_lvl": 2, "safe": 250,
         "ammo": 5, "emp": 3, "reload": 1.0, "emp_cd": 1.0,
-        "cam_rot": 1.0, "reward": 1.0
+        "cam_rot": 1.0, "reward": 1.0,
+        "special": 2, "tele_ms": 1500, "bomb_cd": 3000
     },
     "hardcore": {
         "patrol": 2.2, "chase": 4.0, "obstacles": 0.7,
         "guard_offset": 1, "door_lvl": 2, "safe": 180,
         "ammo": 3, "emp": 2, "reload": 1.3, "emp_cd": 1.3,
-        "cam_rot": 2.0, "reward": 0.7
+        "cam_rot": 2.0, "reward": 0.7,
+        "special": 3, "tele_ms": 1000, "bomb_cd": 2500
     },
     "nightmare": {
         "patrol": 3.0, "chase": 5.0, "obstacles": 0.5,
         "guard_offset": 1, "door_lvl": 2, "safe": 120,
         "ammo": 0, "emp": 0, "reload": 1.5, "emp_cd": 1.5,
-        "cam_rot": 3.0, "reward": 0.5
+        "cam_rot": 3.0, "reward": 0.5,
+        "special": 99, "tele_ms": 700, "bomb_cd": 2000
     }
 }
 difficulty_mode = "normal"
+guard_opts = {"fake": True, "teleport": True, "bomber": True}
 def cfg(k):
     return DIFFICULTIES[difficulty_mode][k]
 
@@ -208,6 +218,8 @@ def guard_collides_player(player: pygame.sprite.Sprite, guards: pygame.sprite.Gr
     """Return True if the player should die by touching a guard."""
     for g in guards:
         if player.rect.colliderect(g.rect):
+            if isinstance(g, (FakeGuard, BomberGuard)):
+                continue
             if g.stun and difficulty_mode in ("easy", "normal"):
                 continue
             return True
@@ -514,6 +526,103 @@ class NPCGuard(pygame.sprite.Sprite):
         end = (self.rect.centerx + self.look.x * length, self.rect.centery + self.look.y * length)
         pygame.draw.line(s, ORANGE, self.rect.center, end, 2)
 
+
+class FakeGuard(NPCGuard):
+    """Blue decoy guard that wanders between terminals."""
+    def __init__(self, pos, terminals):
+        super().__init__(pos)
+        self.image.fill(BLUE)
+        self.terminals = terminals
+        self.target = None
+        self.wait = 0
+
+    def update(self, player, alarm, emp, walls, panic):
+        if self.wait > 0:
+            self.wait -= 16
+            return alarm
+        if not self.target or random.random() < 0.01:
+            self.target = random.choice(list(self.terminals))
+        vec = pygame.math.Vector2(self.target.rect.center) - pygame.math.Vector2(self.rect.center)
+        if vec.length() < 5:
+            self.wait = random.randint(400, 1000)
+            self.target = random.choice(list(self.terminals))
+        else:
+            self._move(vec, self.PATROL_SP, walls)
+        self.look = vec.normalize() if vec.length() else self.look
+        return alarm
+
+
+class TeleportGuard(NPCGuard):
+    """Guard that teleports to the alarm position when triggered."""
+    COLOR = (0, 100, 0)
+
+    def __init__(self, pos):
+        super().__init__(pos)
+        self.image.fill(self.COLOR)
+        self.teleporting = False
+        self.tp_start = 0
+        self.tp_target = (0, 0)
+
+    def update(self, player, alarm, emp, walls, panic):
+        now = pygame.time.get_ticks()
+        if self.teleporting:
+            dur = cfg("tele_ms")
+            prog = (now - self.tp_start) / dur
+            if prog < 0.5:
+                self.image.set_alpha(int(255 * (1 - prog * 2)))
+            else:
+                if self.image.get_alpha() != 255:
+                    self.rect.center = self.tp_target
+                self.image.set_alpha(int(255 * ((prog - 0.5) * 2)))
+            if prog >= 1.0:
+                self.teleporting = False
+                self.image.set_alpha(255)
+                self.state = "chase"
+            return alarm
+
+        if alarm and self.state == "patrol" and not self.teleporting:
+            self.teleporting = True
+            self.tp_start = now
+            self.tp_target = player.rect.center
+            return alarm
+        return super().update(player, alarm, emp, walls, panic)
+
+
+class BomberGuard(NPCGuard):
+    """Guard that explodes when the player gets too close."""
+    def __init__(self, pos):
+        super().__init__(pos)
+        self.image.fill(YELLOW)
+        self.radius = 45
+        self.exploding = False
+        self.exp_start = 0
+        self.cool = 0
+        self.killed = False
+        self.CHASE_SP *= 0.9
+
+    def update(self, player, alarm, emp, walls, panic):
+        now = pygame.time.get_ticks()
+        if self.exploding:
+            if now - self.exp_start > 300:
+                self.exploding = False
+                self.cool = now
+                if pygame.math.Vector2(player.rect.center).distance_to(self.rect.center) <= self.radius:
+                    self.killed = True
+            return alarm
+
+        if now - self.cool > cfg("bomb_cd"):
+            if pygame.math.Vector2(player.rect.center).distance_to(self.rect.center) <= self.radius and line_of_sight(self.rect.center, player.rect.center, walls):
+                self.exploding = True
+                self.exp_start = now
+
+        alarm = super().update(player, alarm, emp, walls, panic)
+        return alarm
+
+    def draw(self, s):
+        super().draw(s)
+        col = RED if self.exploding and ((pygame.time.get_ticks() - self.exp_start)//100)%2==0 else BLACK
+        pygame.draw.circle(s, col, self.rect.center, self.radius, 1)
+
 # ------------------------------------------------
 # 9) Room & Level
 # ------------------------------------------------
@@ -579,11 +688,34 @@ class Room:
             *[Terminal(get_valid_position(30, 30, self.inner_walls, w, h)) for _ in range(guards)])
 
         self.npcs = pygame.sprite.Group()
-        for _ in range(guards):
+        special_limit = min(cfg("special"), max(0, guards - 1))
+        special_count = 0
+        for i in range(guards):
             pos = get_valid_position(30, 30, self.inner_walls, w, h)
             while any(pygame.math.Vector2(pos).distance_to(sp) < cfg("safe") for sp in safe_points):
                 pos = get_valid_position(30, 30, self.inner_walls, w, h)
-            self.npcs.add(NPCGuard(pos))
+            if i == 0:
+                g = NPCGuard(pos)
+            else:
+                choices = []
+                if guard_opts["fake"]:
+                    choices.append("fake")
+                if guard_opts["teleport"]:
+                    choices.append("tele")
+                if guard_opts["bomber"]:
+                    choices.append("bomb")
+                if choices and special_count < special_limit:
+                    kind = random.choice(choices)
+                    if kind == "fake":
+                        g = FakeGuard(pos, self.terminals)
+                    elif kind == "tele":
+                        g = TeleportGuard(pos)
+                    else:
+                        g = BomberGuard(pos)
+                    special_count += 1
+                else:
+                    g = NPCGuard(pos)
+            self.npcs.add(g)
 
         self.cameras = pygame.sprite.Group()
         for _ in range(random.randint(1, 3)):
@@ -608,6 +740,15 @@ class Room:
             g.dir = g._rand_dir()
             g.path = []
             g.idx = 0
+            if isinstance(g, TeleportGuard):
+                g.teleporting = False
+                g.image.set_alpha(255)
+            if isinstance(g, BomberGuard):
+                g.exploding = False
+                g.killed = False
+                g.cool = 0
+            if isinstance(g, FakeGuard):
+                g.wait = 0
 
     def update(self, player, emp):
         all_walls = self.outer_walls + self.inner_walls
@@ -618,11 +759,15 @@ class Room:
             c.update(emp)
             if not emp and c.detect(player, all_walls):
                 self.alarm = True; self.alarm_t = pygame.time.get_ticks()
+        dead = False
         for g in self.npcs:
             before = self.alarm
             self.alarm = g.update(player, self.alarm, emp, guard_walls, self.alarm) or self.alarm
             if not before and self.alarm:
                 self.alarm_t = pygame.time.get_ticks()
+            if isinstance(g, BomberGuard) and g.killed:
+                dead = True
+                g.killed = False
         self.bullets.update()
         for b in list(self.bullets):
             if any(b.rect.colliderect(w) for w in all_walls):
@@ -632,6 +777,7 @@ class Room:
                 hit.stun = True; hit.stun_t = pygame.time.get_ticks(); hit.image.fill(GRAY); b.kill()
         if self.alarm and pygame.time.get_ticks() - self.alarm_t > CHASE_TIMEOUT:
             self.alarm = False
+        return dead
 
     def draw(self, s):
         for r in self.outer_walls + self.inner_walls:
@@ -686,7 +832,7 @@ class Level:
         self.cur = 0
 
     def update(self, player, emp):
-        self.rooms[self.cur].update(player, emp)
+        return self.rooms[self.cur].update(player, emp)
 
     def draw(self, s):
         self.rooms[self.cur].draw(s)
@@ -783,6 +929,26 @@ def show_shop_info(scr):
     simple_menu(scr, t["shopdesc"], t["shop_info"].split(" | ") + [t["back"]])
 
 
+def settings_menu(scr):
+    t = lang_texts[current_language]
+    while True:
+        opts = [
+            f"{t['fake']}: {t['on'] if guard_opts['fake'] else t['off']}",
+            f"{t['tele']}: {t['on'] if guard_opts['teleport'] else t['off']}",
+            f"{t['bomber']}: {t['on'] if guard_opts['bomber'] else t['off']}",
+            t['back']
+        ]
+        sel = simple_menu(scr, t['settings'], opts)
+        if sel == len(opts) - 1:
+            return
+        if sel == 0:
+            guard_opts['fake'] = not guard_opts['fake']
+        elif sel == 1:
+            guard_opts['teleport'] = not guard_opts['teleport']
+        elif sel == 2:
+            guard_opts['bomber'] = not guard_opts['bomber']
+
+
 def lang_menu(scr):
     global current_language
     langs = [("English", "en"), ("Deutsch", "de"), ("Español", "es"), ("Français", "fr"), (lang_texts[current_language]["back"], None)]
@@ -805,20 +971,22 @@ def main_menu():
     scr = pygame.display.set_mode((BASE_W, BASE_H))
     while True:
         t = lang_texts[current_language]
-        choice = simple_menu(scr, t["title"], [t["start"], t["difficulty"], t["leader"], t["ctrl"], t["shopdesc"], t["lang"], t["quit"]])
+        choice = simple_menu(scr, t["title"], [t["start"], t["difficulty"], t["settings"], t["leader"], t["ctrl"], t["shopdesc"], t["lang"], t["quit"]])
         if choice == 0:
             main_game()
         if choice == 1:
             difficulty_menu(scr)
         if choice == 2:
-            show_leader(scr)
+            settings_menu(scr)
         if choice == 3:
-            show_controls(scr)
+            show_leader(scr)
         if choice == 4:
-            show_shop_info(scr)
+            show_controls(scr)
         if choice == 5:
-            lang_menu(scr)
+            show_shop_info(scr)
         if choice == 6:
+            lang_menu(scr)
+        if choice == 7:
             pygame.quit(); sys.exit()
 
 # ------------------------------------------------
@@ -888,8 +1056,8 @@ def main_game():
         emp = emp and pygame.time.get_ticks() - emp_t < 2000
         walls = current_level.rooms[current_level.cur].inner_walls
         player.update(pygame.key.get_pressed(), walls)
-        current_level.update(player, emp)
-        if guard_collides_player(player, current_level.rooms[current_level.cur].npcs):
+        dead = current_level.update(player, emp)
+        if dead or guard_collides_player(player, current_level.rooms[current_level.cur].npcs):
             running = False
         if current_level.all_hacked():
             rooms_done += current_level.n
