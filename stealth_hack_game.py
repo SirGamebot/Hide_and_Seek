@@ -110,28 +110,28 @@ DIFFICULTIES = {
         "guard_offset": 0, "door_lvl": 3, "safe": 250,
         "ammo": 6, "emp": 4, "reload": 0.8, "emp_cd": 0.8,
         "cam_rot": 0.5, "reward": 1.0,
-        "special": 1, "tele_ms": 2000, "bomb_cd": 4000, "bomb_delay": 2500
+        "special": 1, "tele_ms": 1500, "bomb_cd": 4000, "bomb_delay": 2000
     },
     "normal": {
         "patrol": 2.2, "chase": 3.2, "obstacles": 1.0,
         "guard_offset": 1, "door_lvl": 2, "safe": 250,
         "ammo": 5, "emp": 3, "reload": 1.0, "emp_cd": 1.0,
         "cam_rot": 1.0, "reward": 1.0,
-        "special": 2, "tele_ms": 1500, "bomb_cd": 3000, "bomb_delay": 2000
+        "special": 2, "tele_ms": 1000, "bomb_cd": 3000, "bomb_delay": 1600
     },
     "hardcore": {
         "patrol": 2.2, "chase": 4.0, "obstacles": 0.7,
         "guard_offset": 1, "door_lvl": 2, "safe": 180,
         "ammo": 3, "emp": 2, "reload": 1.3, "emp_cd": 1.3,
         "cam_rot": 2.0, "reward": 0.7,
-        "special": 3, "tele_ms": 1000, "bomb_cd": 2500, "bomb_delay": 1200
+        "special": 3, "tele_ms": 700, "bomb_cd": 2500, "bomb_delay": 1000
     },
     "nightmare": {
         "patrol": 3.0, "chase": 5.0, "obstacles": 0.5,
         "guard_offset": 1, "door_lvl": 2, "safe": 120,
         "ammo": 0, "emp": 0, "reload": 1.5, "emp_cd": 1.5,
         "cam_rot": 3.0, "reward": 0.5,
-        "special": 99, "tele_ms": 700, "bomb_cd": 2000, "bomb_delay": 800
+        "special": 99, "tele_ms": 500, "bomb_cd": 2000, "bomb_delay": 600
     }
 }
 difficulty_mode = "normal"
@@ -532,6 +532,7 @@ class FakeGuard(NPCGuard):
     def __init__(self, pos, terminals):
         super().__init__(pos)
         self.image.fill(BLUE)
+        self.PATROL_SP *= 1.2
         self.terminals = terminals
         self.target = None
         self.wait = 0
@@ -645,8 +646,10 @@ class BomberGuard(NPCGuard):
 
     def draw(self, s):
         blink = self.exploding and ((pygame.time.get_ticks() - self.exp_start) // 100) % 2 == 0
-        col = RED if blink else YELLOW
-        pygame.draw.circle(s, col, self.rect.center, self.radius)
+        col = (255, 0, 0, 160) if blink else (255, 255, 255, 80)
+        surf = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
+        pygame.draw.circle(surf, col, (self.radius, self.radius), self.radius)
+        s.blit(surf, (self.rect.centerx - self.radius, self.rect.centery - self.radius))
         super().draw(s)
 
 # ------------------------------------------------
@@ -715,7 +718,8 @@ class Room:
 
         self.npcs = pygame.sprite.Group()
         special_limit = min(cfg("special"), max(0, guards - 1))
-        special_count = 0
+        num_special = random.randint(0, special_limit)
+        special_indices = set(random.sample(range(1, guards), k=num_special)) if num_special else set()
         for i in range(guards):
             pos = get_valid_position(30, 30, self.inner_walls, w, h)
             while any(pygame.math.Vector2(pos).distance_to(sp) < cfg("safe") for sp in safe_points):
@@ -730,7 +734,7 @@ class Room:
                     choices.append("tele")
                 if guard_opts["bomber"]:
                     choices.append("bomb")
-                if choices and special_count < special_limit:
+                if choices and i in special_indices:
                     kind = random.choice(choices)
                     if kind == "fake":
                         g = FakeGuard(pos, self.terminals)
@@ -738,7 +742,6 @@ class Room:
                         g = TeleportGuard(pos)
                     else:
                         g = BomberGuard(pos)
-                    special_count += 1
                 else:
                     g = NPCGuard(pos)
             self.npcs.add(g)
