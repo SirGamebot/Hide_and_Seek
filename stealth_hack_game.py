@@ -649,6 +649,7 @@ class BomberGuard(NPCGuard):
         col = (255, 0, 0, 160) if blink else (255, 255, 255, 80)
         surf = pygame.Surface((self.radius * 2, self.radius * 2), pygame.SRCALPHA)
         pygame.draw.circle(surf, col, (self.radius, self.radius), self.radius)
+        pygame.draw.circle(surf, BLACK, (self.radius, self.radius), self.radius, 1)
         s.blit(surf, (self.rect.centerx - self.radius, self.rect.centery - self.radius))
         super().draw(s)
 
